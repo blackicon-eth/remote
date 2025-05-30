@@ -3,6 +3,8 @@
 import { ShootingStars } from "@/components/aceternity-ui/shooting-stars";
 import { StarsBackground } from "@/components/aceternity-ui/stars-background";
 import AppKitProvider from "@/components/context/appkit-provider";
+import { CartProvider } from "@/components/context/cart-provider";
+import { OpportunitiesProvider } from "@/components/context/opportunities-provider";
 import { Navbar } from "@/components/custom-ui/navbar";
 
 interface ProvidersProps {
@@ -14,10 +16,20 @@ interface ProvidersProps {
 export default function Providers({ children, cookies }: ProvidersProps) {
   return (
     <AppKitProvider cookies={cookies}>
-      <Navbar />
-      {children}
-      <ShootingStars minDelay={2000} maxDelay={4000} maxSpeed={15} minSpeed={7} starHeight={2} />
-      <StarsBackground />
+      <OpportunitiesProvider>
+        <CartProvider>
+          <Navbar />
+          {children}
+          <ShootingStars
+            minDelay={2000}
+            maxDelay={4000}
+            maxSpeed={15}
+            minSpeed={7}
+            starHeight={2}
+          />
+          <StarsBackground />
+        </CartProvider>
+      </OpportunitiesProvider>
     </AppKitProvider>
   );
 }

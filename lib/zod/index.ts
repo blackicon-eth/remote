@@ -2,7 +2,10 @@ import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
 export const env = createEnv({
-  server: {},
+  server: {
+    // PORTALS
+    PORTALS_API_KEY: z.string().min(1),
+  },
   client: {
     // REOWN APP ID
     NEXT_PUBLIC_REOWN_APP_ID: z.string().min(1),

@@ -29,7 +29,7 @@ export const viemMainnetPublicClient = createPublicClient({
  */
 export const getEnsNameAndAvatar = async (
   address: Address
-): Promise<{ ensName: string; avatar: string }> => {
+): Promise<{ ensName: string | null; avatar: string | null }> => {
   const resolver = await getResolver(viemMainnetPublicClient, {
     name: normalize(address as Address),
   });
@@ -53,9 +53,9 @@ export const getEnsNameAndAvatar = async (
       })) as string;
     }
 
-    return { ensName: foundEns ?? "", avatar: foundAvatar ?? "" };
+    return { ensName: foundEns ?? null, avatar: foundAvatar ?? null };
   } catch (error) {
     console.log("Error in getting ENS from address", error);
-    return { ensName: "", avatar: "" };
+    return { ensName: null, avatar: null };
   }
 };
