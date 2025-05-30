@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ensdomains/ensjs": "^4.0.2",
+    "@radix-ui/react-dropdown-menu": "^2.1.15",
     "@reown/appkit": "^1.7.7",
     "@reown/appkit-adapter-wagmi": "^1.7.7",
     "@reown/appkit-common": "^1.7.7",
