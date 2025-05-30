@@ -10,10 +10,12 @@ import { ChainColors, ChainImages } from "@/lib/constants";
 import { AnimatePresence, motion } from "motion/react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { PlaceholdersAndVanishInput } from "@/components/aceternity-ui/placeholder-vanish-input";
+import { cn, formatNumber, platformNameFormatter } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
 import { useCart } from "@/components/context/cart-provider";
 
 export default function Home() {
+  const { addToCart, removeFromCart, cart } = useCart();
   const [selectedChains, setSelectedChains] = useState<SupportedNetworks[]>([
     SupportedNetworks.ARBITRUM,
     SupportedNetworks.BASE,
@@ -23,6 +25,13 @@ export default function Home() {
     ListModes.ALL_POSITIONS
   );
   const [searchInput, setSearchInput] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
+  const [sortColumn, setSortColumn] = useState<"apy" | "liquidity" | null>(
+    null
+  );
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(
+    null
+  );
 
   const {
     opportunities,
@@ -32,15 +41,77 @@ export default function Home() {
     isRefetchingOpportunities,
   } = useOpportunities();
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   const filteredOpportunities = useMemo(() => {
-    return opportunities?.filter((opportunity) =>
-      opportunity.name.toLowerCase().includes(searchInput.toLowerCase())
+    let filtered = opportunities?.filter(
+      (opportunity) =>
+        (opportunity.name
+          .toLowerCase()
+          .includes(debouncedSearch.toLowerCase()) ||
+          opportunity.platform
+            .toLowerCase()
+            .includes(debouncedSearch.toLowerCase())) &&
+        selectedChains.includes(opportunity.network as SupportedNetworks)
     );
-  }, [opportunities, searchInput]);
+
+    // Apply sorting if a column is selected
+    if (filtered && sortColumn && sortDirection) {
+      filtered = [...filtered].sort((a, b) => {
+        let aValue: number;
+        let bValue: number;
+
+        if (sortColumn === "apy") {
+          aValue = Number.parseFloat(a.metrics.apy);
+          bValue = Number.parseFloat(b.metrics.apy);
+        } else {
+          aValue = a.liquidity;
+          bValue = b.liquidity;
+        }
+
+        if (sortDirection === "desc") {
+          return bValue - aValue;
+        } else {
+          return aValue - bValue;
+        }
+      });
+    }
+
+    return filtered;
+  }, [
+    opportunities,
+    debouncedSearch,
+    selectedChains,
+    sortColumn,
+    sortDirection,
+  ]);
+
+  const handleSort = useCallback(
+    (column: "apy" | "liquidity") => {
+      if (sortColumn === column) {
+        if (sortDirection === "desc") {
+          setSortDirection("asc");
+        } else if (sortDirection === "asc") {
+          setSortColumn(null);
+          setSortDirection(null);
+        }
+      } else {
+        setSortColumn(column);
+        setSortDirection("desc");
+      }
+    },
+    [sortColumn, sortDirection]
+  );
 
   useEffect(() => {
-    console.log(opportunities);
-  }, [opportunities]);
+    console.log(filteredOpportunities);
+  }, [filteredOpportunities]);
 
   return (
     <AnimatePresence mode="wait">
@@ -122,11 +193,49 @@ export default function Home() {
                   <button className="flex justify-center items-center w-[25%] h-full">
                     Deposited
                   </button>
-                  <button className="flex justify-center items-center gap-1 w-[25%] h-full cursor-pointer hover:text-neutral-300 transition-colors">
+                  <button
+                    className="flex justify-center items-center gap-1 w-[25%] h-full cursor-pointer hover:text-neutral-300 transition-colors"
+                    onClick={() => handleSort("apy")}
+                  >
                     Current APY
+                    <AnimatePresence>
+                      {sortColumn === "apy" && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{
+                            opacity: 1,
+                            scale: 1,
+                            rotate: sortDirection === "asc" ? 180 : 0,
+                          }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </button>
-                  <button className="flex justify-center items-center gap-1 w-[25%] h-full cursor-pointer hover:text-neutral-300 transition-colors">
+                  <button
+                    className="flex justify-center items-center gap-1 w-[25%] h-full cursor-pointer hover:text-neutral-300 transition-colors"
+                    onClick={() => handleSort("liquidity")}
+                  >
                     Liquidity
+                    <AnimatePresence>
+                      {sortColumn === "liquidity" && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{
+                            opacity: 1,
+                            scale: 1,
+                            rotate: sortDirection === "asc" ? 180 : 0,
+                          }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </button>
                 </div>
               </div>
@@ -156,7 +265,104 @@ export default function Home() {
                     >
                       <AnimatePresence>
                         {filteredOpportunities?.map((opportunity, index) => (
-                          <p key={index}>{opportunity.name}</p>
+                          <motion.button
+                            key={opportunity.key}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            layout
+                            className="w-full cursor-pointer"
+                            onClick={() => {
+                              // if the opportunity is already in the cart, remove it
+                              if (cart.some((t) => t.key === opportunity.key)) {
+                                removeFromCart(opportunity);
+                              } else {
+                                addToCart(opportunity);
+                              }
+                            }}
+                          >
+                            <div
+                              className={cn(
+                                "relative flex justify-between items-center w-full py-5 px-2 border-b border-neutral-700 transition-all duration-500",
+                                index === filteredOpportunities.length - 1 &&
+                                  "border-b-0",
+                                cart.some((t) => t.key === opportunity.key) &&
+                                  "bg-neutral-600/30"
+                              )}
+                            >
+                              {/* Chain icon */}
+                              <div className="absolute flex justify-center items-center top-0 left-0 bg-neutral-700 rounded-br-lg size-6">
+                                <img
+                                  src={
+                                    ChainImages[
+                                      opportunity.network as SupportedNetworks
+                                    ]
+                                  }
+                                  alt={opportunity.network}
+                                  className="size-[18px] -ml-[1px] -mt-[1px]"
+                                />
+                              </div>
+
+                              <div className="flex justify-start items-center shrink-0 w-[50%]">
+                                <div className="flex justify-center items-center w-[96px]">
+                                  {opportunity.images
+                                    .slice(1)
+                                    .map((image, index) => (
+                                      <img
+                                        key={index}
+                                        src={image}
+                                        alt={opportunity.name}
+                                        className="rounded-full object-cover"
+                                        style={{
+                                          marginLeft:
+                                            index === 0
+                                              ? 0
+                                              : opportunity.images.length > 4
+                                              ? -20
+                                              : -14,
+                                          width:
+                                            opportunity.images.length === 2
+                                              ? "40px"
+                                              : "35px",
+                                          height:
+                                            opportunity.images.length === 2
+                                              ? "40px"
+                                              : "35px",
+                                        }}
+                                      />
+                                    ))}
+                                </div>
+                                <div className="flex flex-col justify-start items-start ml-3 gap-0.5">
+                                  <div className="text-white text-[15px]">
+                                    {opportunity.name}
+                                  </div>
+                                  <div className="flex justify-start items-center gap-1">
+                                    <img
+                                      src={opportunity.images[0]}
+                                      alt={opportunity.name}
+                                      className="rounded-full object-cover size-[16px]"
+                                    />
+                                    <p className="text-neutral-400 text-xs pt-[2px]">
+                                      {platformNameFormatter(
+                                        opportunity.platform
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex justify-between items-center shrink-0 w-[500px] text-white text-sm pr-10">
+                                <div className="flex justify-center items-center w-[25%] text-[15px] font-medium">
+                                  $0
+                                </div>
+                                <div className="flex justify-center items-center w-[25%] text-[15px] font-medium">
+                                  {opportunity.metrics.apy}%
+                                </div>
+                                <div className="flex justify-center items-center w-[25%] text-[15px] font-medium">
+                                  ${formatNumber(opportunity.liquidity)}
+                                </div>
+                              </div>
+                            </div>
+                          </motion.button>
                         ))}
                       </AnimatePresence>
                     </motion.div>
