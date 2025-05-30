@@ -141,13 +141,11 @@ export const Navbar = () => {
                   opacity: 1,
                   scale: [1, 1.05, 1.1, 1.15, 1.2, 1.15, 1.1, 1.05, 1],
                 }}
-                exit={{ opacity: 0 }}
+                exit={{ opacity: 0, scale: 0.5 }}
                 transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="absolute flex justify-center items-center -bottom-0.5 -right-0.5 rounded-full border border-neutral-700 bg-green-500 size-4"
+                className="absolute flex justify-center items-center -bottom-0.5 -right-0.5 rounded-full border border-neutral-700 bg-green-500 size-4 text-center text-black text-[9px] font-bold"
               >
-                <p className="text-center text-black text-[9px] font-bold">
-                  {cart.length}
-                </p>
+                {cart.length}
               </motion.p>
             )}
           </AnimatePresence>
