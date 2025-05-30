@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -57,7 +57,7 @@ export function HoverBorderGradient({
   }, [hovered]);
   return (
     <Tag
-      onMouseEnter={(event: React.MouseEvent<HTMLDivElement>) => {
+      onMouseEnter={(_: React.MouseEvent<HTMLDivElement>) => {
         setHovered(true);
       }}
       onMouseLeave={() => setHovered(false)}
@@ -67,11 +67,18 @@ export function HoverBorderGradient({
       )}
       {...props}
     >
-      <div className={cn("w-auto text-white z-10 bg-black px-4 py-2 rounded-[inherit]", className)}>
+      <div
+        className={cn(
+          "w-auto text-white z-10 bg-black px-4 py-2 rounded-[inherit]",
+          className
+        )}
+      >
         {children}
       </div>
       <motion.div
-        className={cn("flex-none inset-0 overflow-hidden absolute z-0 rounded-[inherit]")}
+        className={cn(
+          "flex-none inset-0 overflow-hidden absolute z-0 rounded-[inherit]"
+        )}
         style={{
           filter: "blur(2px)",
           position: "absolute",
@@ -80,7 +87,9 @@ export function HoverBorderGradient({
         }}
         initial={{ background: movingMap[direction] }}
         animate={{
-          background: hovered ? [movingMap[direction], highlight] : movingMap[direction],
+          background: hovered
+            ? [movingMap[direction], highlight]
+            : movingMap[direction],
         }}
         transition={{ ease: "linear", duration: duration ?? 1 }}
       />
