@@ -12,6 +12,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { PlaceholdersAndVanishInput } from "@/components/aceternity-ui/placeholder-vanish-input";
 import { OpportunityTableRow } from "@/components/custom-ui/opportunity-table-row";
 import { TableHeaderButton } from "@/components/custom-ui/table-header-button";
+import { useUserBalances } from "@/components/context/user-balances-provider";
 
 export default function Home() {
   const [selectedChains, setSelectedChains] = useState<SupportedNetworks[]>([
@@ -38,6 +39,13 @@ export default function Home() {
     refetchOpportunities,
     isRefetchingOpportunities,
   } = useOpportunities();
+
+  const {
+    userTokens,
+    isLoadingUserTokens,
+    isErrorUserTokens,
+    isRefetchingUserTokens,
+  } = useUserBalances();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -106,10 +114,6 @@ export default function Home() {
     },
     [sortColumn, sortDirection]
   );
-
-  useEffect(() => {
-    console.log(filteredOpportunities);
-  }, [filteredOpportunities]);
 
   return (
     <AnimatePresence mode="wait">

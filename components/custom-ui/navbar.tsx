@@ -43,6 +43,15 @@ export const Navbar = () => {
   // Whether the cart is filled with some items or not
   const isCartFilled = useMemo(() => cart.length > 0, [cart]);
 
+  const handleCartOpen = () => {
+    if (isConnected) {
+      // TODO: Open the cart
+      return;
+    } else if (isCartFilled && !isConnected) {
+      open({ view: "Connect" });
+    }
+  };
+
   return (
     <motion.nav
       initial={{ opacity: 0 }}
@@ -131,6 +140,7 @@ export const Navbar = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className="relative flex justify-center items-center cursor-pointer bg-neutral-900 rounded-full border border-neutral-700 p-3 gap-2"
+          onClick={handleCartOpen}
         >
           <ShoppingCart className="size-4 text-white" />
           <AnimatePresence>

@@ -34,3 +34,7 @@ export type PortalsToken = {
   tokenId: string;
   reserves: string[];
 };
+
+export type UserBalances = {
+  balances: PortalsToken[];
+};
