@@ -18,6 +18,27 @@ export function formatNumber(num: number): string {
 }
 
 /**
+ * Formats a platform name to a more readable format
+ * @param platform - The platform name to format
+ * @returns The formatted platform name
+ */
+export function platformNameFormatter(platform: string) {
+  const lowerCasePlatform = platform.toLowerCase();
+  if (lowerCasePlatform.includes("uniswap")) return "Uniswap";
+  else if (lowerCasePlatform.includes("sushiswap")) return "Sushiswap";
+  else if (lowerCasePlatform.includes("curve")) return "Curve";
+  else if (lowerCasePlatform.includes("balancer")) return "Balancer";
+  else if (lowerCasePlatform.includes("aave")) return "Aave";
+  else if (lowerCasePlatform.includes("compound")) return "Compound";
+  else if (lowerCasePlatform.includes("yearn")) return "Yearn";
+  else if (lowerCasePlatform.includes("dydx")) return "dYdX";
+  else if (lowerCasePlatform.includes("maker")) return "Maker";
+  else if (lowerCasePlatform.includes("pendle")) return "Pendle";
+  else if (lowerCasePlatform.includes("pancake")) return "PancakeSwap";
+  else return platform.slice(0, 1).toUpperCase() + platform.slice(1);
+}
+
+/**
  * Truncates an address to the given size keeping the 0x prefix
  * @param address - The address to truncate
  * @param size - The size of the truncated address
