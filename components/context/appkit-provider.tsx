@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createAppKit } from "@reown/appkit/react";
 import React, { type ReactNode } from "react";
 import { cookieToInitialState, WagmiProvider, type Config } from "wagmi";
-import { env } from "@/lib/env";
+import { env } from "@/lib/zod";
 import { base, flowMainnet } from "@reown/appkit/networks";
 
 // Set up queryClient
@@ -32,11 +32,23 @@ createAppKit({
   },
 });
 
-function AppKitProvider({ children, cookies }: { children: ReactNode; cookies: string | null }) {
-  const initialState = cookieToInitialState(wagmiAdapter.wagmiConfig as Config, cookies);
+function AppKitProvider({
+  children,
+  cookies,
+}: {
+  children: ReactNode;
+  cookies: string | null;
+}) {
+  const initialState = cookieToInitialState(
+    wagmiAdapter.wagmiConfig as Config,
+    cookies
+  );
 
   return (
-    <WagmiProvider config={wagmiAdapter.wagmiConfig as Config} initialState={initialState}>
+    <WagmiProvider
+      config={wagmiAdapter.wagmiConfig as Config}
+      initialState={initialState}
+    >
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </WagmiProvider>
   );
