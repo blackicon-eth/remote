@@ -63,11 +63,13 @@ export const Navbar = () => {
                     as="div"
                     className="bg-neutral-900 text-white h-10 flex items-center gap-2"
                   >
-                    <img
-                      src={ensInfo.avatar}
-                      alt="ENS Avatar"
-                      className="size-6 object-cover rounded-full"
-                    />
+                    {ensInfo.avatar && (
+                      <img
+                        src={ensInfo.avatar}
+                        alt="ENS Avatar"
+                        className="size-6 object-cover rounded-full"
+                      />
+                    )}
                     <span>
                       {ensInfo.ensName || truncateAddress(address ?? "")}
                     </span>
