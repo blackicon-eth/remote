@@ -25,6 +25,7 @@
     "next": "15.3.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-loader-spinner": "^6.1.6",
     "tailwind-merge": "^3.3.0",
     "viem": "^2.30.5",
     "wagmi": "^2.15.4",
