@@ -10,8 +10,8 @@ import { ChainColors, ChainImages } from "@/lib/constants";
 import { AnimatePresence, motion } from "motion/react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { PlaceholdersAndVanishInput } from "@/components/aceternity-ui/placeholder-vanish-input";
-import { ChevronDown } from "lucide-react";
 import { OpportunityTableRow } from "@/components/custom-ui/opportunity-table-row";
+import { TableHeaderButton } from "@/components/custom-ui/table-header-button";
 
 export default function Home() {
   const [selectedChains, setSelectedChains] = useState<SupportedNetworks[]>([
@@ -188,53 +188,28 @@ export default function Home() {
                   />
                 </div>
                 <div className="flex justify-between items-center shrink-0 w-[500px] h-[40px] text-white text-sm pr-[44px]">
-                  <button className="flex justify-center items-center w-[25%] h-full">
-                    Deposited
-                  </button>
-                  <button
-                    className="flex justify-center items-center gap-1 w-[25%] h-full cursor-pointer hover:text-neutral-300 transition-colors"
-                    onClick={() => handleSort("apy")}
-                  >
-                    Current APY
-                    <AnimatePresence>
-                      {sortColumn === "apy" && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{
-                            opacity: 1,
-                            scale: 1,
-                            rotate: sortDirection === "asc" ? 180 : 0,
-                          }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <ChevronDown className="w-4 h-4" />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </button>
-                  <button
-                    className="flex justify-center items-center gap-1 w-[25%] h-full cursor-pointer hover:text-neutral-300 transition-colors"
-                    onClick={() => handleSort("liquidity")}
-                  >
-                    Liquidity
-                    <AnimatePresence>
-                      {sortColumn === "liquidity" && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{
-                            opacity: 1,
-                            scale: 1,
-                            rotate: sortDirection === "asc" ? 180 : 0,
-                          }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <ChevronDown className="w-4 h-4" />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </button>
+                  <TableHeaderButton
+                    text="Deposited"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    column="apy"
+                    onSort={handleSort}
+                    sortable={false}
+                  />
+                  <TableHeaderButton
+                    text="Current APY"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    column="apy"
+                    onSort={handleSort}
+                  />
+                  <TableHeaderButton
+                    text="Liquidity"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    column="liquidity"
+                    onSort={handleSort}
+                  />
                 </div>
               </div>
 
