@@ -16,7 +16,8 @@ export type PortalsToken = {
   addresses: Record<string, string>;
   platform: string;
   network: string;
-  images: string[];
+  images?: string[];
+  image?: string;
   updatedAt: string;
   createdAt: string;
   tokens: string[];

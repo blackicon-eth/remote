@@ -13,6 +13,9 @@ interface RemoteButtonProps {
   duration?: number;
   clockwise?: boolean;
   onClick?: () => void;
+  hoverZoom?: number;
+  tapZoom?: number;
+  disabled?: boolean;
 }
 
 export function RemoteButton({
@@ -22,6 +25,9 @@ export function RemoteButton({
   duration = 1,
   clockwise = true,
   onClick,
+  hoverZoom = 1.02,
+  tapZoom = 0.98,
+  disabled = false,
 }: RemoteButtonProps) {
   const [hovered, setHovered] = useState<boolean>(false);
   const [direction, setDirection] = useState<Direction>("TOP");
@@ -58,8 +64,12 @@ export function RemoteButton({
 
   return (
     <motion.button
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      disabled={disabled}
+      whileHover={{ scale: disabled ? 1 : hoverZoom }}
+      whileTap={{ scale: disabled ? 1 : tapZoom }}
+      animate={{
+        opacity: disabled ? 0.5 : 1,
+      }}
       onClick={onClick}
       className="cursor-pointer z-10"
     >
@@ -70,6 +80,7 @@ export function RemoteButton({
         onMouseLeave={() => setHovered(false)}
         className={cn(
           "relative flex rounded-full border content-center bg-neutral-900/20 hover:bg-neutral-900/10 transition duration-500 dark:bg-white/20 items-center flex-col flex-nowrap gap-10 h-min justify-center overflow-visible p-px decoration-clone w-fit cursor-pointer",
+          disabled && "cursor-default",
           containerClassName
         )}
       >
@@ -93,9 +104,10 @@ export function RemoteButton({
           }}
           initial={{ background: movingMap[direction] }}
           animate={{
-            background: hovered
-              ? [movingMap[direction], highlight]
-              : movingMap[direction],
+            background:
+              hovered && !disabled
+                ? [movingMap[direction], highlight]
+                : movingMap[direction],
           }}
           transition={{ ease: "linear", duration: duration ?? 1 }}
         />
