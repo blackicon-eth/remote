@@ -9,8 +9,11 @@ export const SUPPORTED_NETWORKS = [
   SupportedNetworks.POLYGON,
 ];
 
-// Supported Platforms
+// Empty Address
+export const EMPTY_ADDRESS =
+  "0x0000000000000000000000000000000000000000" as const;
 
+// Supported Platforms
 export const SUPPORTED_PLATFORMS = [
   "aavev3",
   "aerodrome",
@@ -207,9 +210,8 @@ export const getTokenDecimals = async (
   try {
     // Check if token is zero address (native token), return 18 decimals
     if (
-      tokenAddress === "0x0000000000000000000000000000000000000000" ||
-      tokenAddress.toLowerCase() ===
-        "0x0000000000000000000000000000000000000000"
+      tokenAddress === EMPTY_ADDRESS ||
+      tokenAddress.toLowerCase() === EMPTY_ADDRESS
     ) {
       return 18;
     }
@@ -357,11 +359,11 @@ export const getStargateAddress = (
 
   // Handle native token (zero address or "native")
   if (
-    tokenAddress === "0x0000000000000000000000000000000000000000" ||
+    tokenAddress === EMPTY_ADDRESS ||
     tokenAddress.toLowerCase() === "native"
   ) {
     const nativeKey = `${id}:native`;
-    const zeroAddressKey = `${id}:0x0000000000000000000000000000000000000000`;
+    const zeroAddressKey = `${id}:${EMPTY_ADDRESS}`;
     return (
       STARGATE_POOL_MAPPING[nativeKey] ||
       STARGATE_POOL_MAPPING[zeroAddressKey] ||

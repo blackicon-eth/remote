@@ -10,7 +10,7 @@ import {
   ROOTSTOCK_USDC_ADDRESS,
   ROOTSTOCK_WETH_ADDRESS,
 } from "@/lib/constants";
-import { flowMainnet, flare, rootstock } from "viem/chains";
+import { flare } from "viem/chains";
 import { Address, createPublicClient, http, getAddress } from "viem";
 import { AlchemyRpcBaseUrls } from "@/lib/enums";
 import { erc20Abi } from "viem";
@@ -20,11 +20,12 @@ import { networks } from "@/lib/appkit";
 export const GET = async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get("address");
+  const smartAccountAddress = searchParams.get("smartAccountAddress");
   const networkId = searchParams.get("networkId");
 
-  if (!address || !networkId) {
+  if (!address || !networkId || !smartAccountAddress) {
     return NextResponse.json(
-      { error: "Address and networkId are required" },
+      { error: "Address, networkId and smartAccountAddress are required" },
       { status: 400 }
     );
   }
@@ -221,7 +222,7 @@ export const GET = async (request: NextRequest) => {
 
   try {
     const searchParams = new URLSearchParams();
-    searchParams.append("owner", address);
+    searchParams.append("owner", smartAccountAddress);
 
     const baseSearchParams = new URLSearchParams(searchParams);
     baseSearchParams.append("networks", "base");

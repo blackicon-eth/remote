@@ -17,6 +17,7 @@ import {
   chainIdToEid,
   getStargateAddress,
   isTokenUsdc,
+  EMPTY_ADDRESS,
 } from "@/lib/constants";
 import { REMOTE_ACCOUNT_ABI } from "@/lib/abi";
 import { encodeStargateTransactionCalldata } from "@/lib/stargate/utils";
@@ -190,8 +191,15 @@ export const POST = async (request: NextRequest) => {
             )
           );
           const sourceInputAmount = sourceInputAmountBigInt.toString();
-          const sourceInputAmountForMessagingFee = isTokenUsdc(req.sourceChainToken) ? "1000" : "10000000000000"
-          console.log("sourceInputAmountForMessagingFee", sourceInputAmountForMessagingFee);
+          const sourceInputAmountForMessagingFee = isTokenUsdc(
+            req.sourceChainToken
+          )
+            ? "1000"
+            : "10000000000000";
+          console.log(
+            "sourceInputAmountForMessagingFee",
+            sourceInputAmountForMessagingFee
+          );
           console.log("sourceInputAmount", sourceInputAmount);
 
           //calculate adjInputAmount as input amount * 70%
@@ -244,7 +252,10 @@ export const POST = async (request: NextRequest) => {
               ],
               [
                 req.inputToken as `0x${string}`, // operation token
-                getStargateAddress(req.destinationChainId!, req.outputToken) as `0x${string}`, // stargate address of eth on destination chain
+                getStargateAddress(
+                  req.destinationChainId!,
+                  req.outputToken
+                ) as `0x${string}`, // stargate address of eth on destination chain
                 chainIdToEid(req.sourceChainId!)!, // source ID
                 false, //  is a withdraw
                 BigInt(formattedInputAmount) + BigInt(1000000), // amount to approve on destination chain of operation token
@@ -402,9 +413,7 @@ export const POST = async (request: NextRequest) => {
               result.request.sourceChainToken
             );
 
-            stargateAddresses.push(
-              stargateAddress || "0x0000000000000000000000000000000000000000"
-            );
+            stargateAddresses.push(stargateAddress || EMPTY_ADDRESS);
             sendParams.push(result.prepareResult.sendParam);
             messagingFees.push(result.prepareResult.messagingFee);
             nativeAmounts.push(result.prepareResult.valueToSend);

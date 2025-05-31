@@ -16,6 +16,7 @@ import {
   BASE_CHAIN_EID,
   chainIdToEid,
   getStargateAddress,
+  EMPTY_ADDRESS,
 } from "@/lib/constants";
 import { REMOTE_ACCOUNT_ABI } from "@/lib/abi";
 import { encodeStargateTransactionCalldata } from "@/lib/stargate/utils";
@@ -240,8 +241,8 @@ export const POST = async (request: NextRequest) => {
                 { type: "bytes" },
               ],
               [
-                "0x0000000000000000000000000000000000000000", // operation token
-                "0x0000000000000000000000000000000000000000", // stargate address
+                EMPTY_ADDRESS, // operation token
+                EMPTY_ADDRESS, // stargate address
                 chainIdToEid(req.destinationChainId)!, // dest ID
                 true, //  isDeposit
                 BigInt(0), // amount approve
@@ -399,9 +400,7 @@ export const POST = async (request: NextRequest) => {
               result.request.sourceChainToken
             );
 
-            stargateAddresses.push(
-              stargateAddress || "0x0000000000000000000000000000000000000000"
-            );
+            stargateAddresses.push(stargateAddress || EMPTY_ADDRESS);
             sendParams.push(result.prepareResult.sendParam);
             messagingFees.push(result.prepareResult.messagingFee);
             nativeAmounts.push(result.prepareResult.valueToSend);

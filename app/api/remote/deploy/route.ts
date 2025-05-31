@@ -1,3 +1,5 @@
+export const maxDuration = 60;
+
 import { NextRequest, NextResponse } from "next/server";
 import { createWalletClient, http, getAddress, encodeFunctionData } from "viem";
 import { arbitrum, base, flare, rootstock, flowMainnet } from "viem/chains";
