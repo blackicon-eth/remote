@@ -149,5 +149,26 @@ export const ChainImages = {
 };
 
 // ENS Resolvers
-export const ENS_PUBLIC_RESOLVER_ADDRESS = "0x231b0Ee14048e9dCcD1d247744d114a4EB5E8E63";
-export const ENS_PUBLIC_RESOLVER_ADDRESS_2 = "0x4976fb03C32e5B8cfe2b6cCB31c09Ba78EBaBa41";
+export const ENS_PUBLIC_RESOLVER_ADDRESS =
+  "0x231b0Ee14048e9dCcD1d247744d114a4EB5E8E63";
+export const ENS_PUBLIC_RESOLVER_ADDRESS_2 =
+  "0x4976fb03C32e5B8cfe2b6cCB31c09Ba78EBaBa41";
+
+// chainId to network name
+export const CHAIN_ID_TO_NETWORK: Record<number, string> = {
+  8453: "base",
+  42161: "arbitrum",
+  137: "polygon",
+  747: "flow",
+  14: "flare",
+  30: "rootstock",
+};
+
+export const chainIdToNetworkName = (
+  chainId: number | string
+): string | null => {
+  const id = typeof chainId === "string" ? parseInt(chainId, 10) : chainId;
+  return CHAIN_ID_TO_NETWORK[id] || null;
+};
+
+
