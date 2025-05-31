@@ -27,7 +27,7 @@ export const ModeButton = ({
   const { open } = useAppKit();
 
   const isSelected = selectedMode === listMode;
-  const isWalletDisconnected = useMemo(
+  const isMyPositionsAndDisconnected = useMemo(
     () => !isConnected && listMode === ListModes.MY_POSITIONS,
     [isConnected, listMode]
   );
@@ -35,13 +35,13 @@ export const ModeButton = ({
   // If the wallet is disconnected while the MY_POSITIONS
   // button is selected, we need to deselect it
   useEffect(() => {
-    if (isSelected && isWalletDisconnected) {
+    if (isSelected && isMyPositionsAndDisconnected) {
       setSelectedMode(ListModes.ALL_POSITIONS);
     }
-  }, [isConnected, isSelected, setSelectedMode]);
+  }, [isConnected]);
 
   const handleClick = () => {
-    if (isWalletDisconnected) {
+    if (isMyPositionsAndDisconnected) {
       open({ view: "Connect" });
     } else if (isSelected) {
       return;
