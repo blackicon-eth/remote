@@ -35,4 +35,5 @@ export enum AlchemyRpcBaseUrls {
   "celo" = "https://celo-mainnet.g.alchemy.com/v2",
   "ink" = "https://ink-mainnet.g.alchemy.com/v2",
   "flow evm mainnet" = "https://flow-mainnet.g.alchemy.com/v2",
+  "rootstock mainnet" = "https://rootstock-mainnet.g.alchemy.com/v2",
 }

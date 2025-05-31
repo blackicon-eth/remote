@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import ky from "ky";
-import { useAppKitAccount } from "@reown/appkit/react";
+import { useAppKitAccount, useAppKitState } from "@reown/appkit/react";
 import { UserTokens } from "@/lib/types";
 
 interface UserBalancesContextType {
@@ -27,6 +27,9 @@ const UserBalancesContext = createContext<UserBalancesContextType | undefined>(
 
 export function UserBalancesProvider({ children }: { children: ReactNode }) {
   const { address } = useAppKitAccount();
+  const { selectedNetworkId } = useAppKitState();
+
+  const sanitizedNetworkId = selectedNetworkId?.split(":")[1] ?? "0";
 
   const {
     data: userBalances,
@@ -40,12 +43,23 @@ export function UserBalancesProvider({ children }: { children: ReactNode }) {
     queryFn: async () => {
       return await ky
         .get<PortalsToken[]>("/api/portals/account", {
-          searchParams: { address: address! },
+          searchParams: {
+            address: address!,
+            networkId: sanitizedNetworkId,
+          },
         })
         .json();
     },
     enabled: !!address,
   });
+
+  // Refetch the user balances when the network changes
+  useEffect(() => {
+    console.log("refetching user balances");
+    if (address) {
+      refetchUserTokens();
+    }
+  }, [selectedNetworkId]);
 
   const userTokens = useMemo(() => {
     if (!userBalances) return undefined;

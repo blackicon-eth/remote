@@ -6,7 +6,7 @@ import { createAppKit } from "@reown/appkit/react";
 import React, { type ReactNode } from "react";
 import { cookieToInitialState, WagmiProvider, type Config } from "wagmi";
 import { env } from "@/lib/zod";
-import { base, flowMainnet } from "@reown/appkit/networks";
+import { flowMainnet, flare, rootstock, base } from "@reown/appkit/networks";
 
 // Set up queryClient
 const queryClient = new QueryClient();
@@ -23,8 +23,8 @@ const metadata = {
 createAppKit({
   adapters: [wagmiAdapter],
   projectId,
-  networks: [flowMainnet],
-  defaultNetwork: base,
+  networks: [flowMainnet, flare, rootstock, base],
+  defaultNetwork: flowMainnet,
   metadata: metadata,
   features: {
     analytics: true,

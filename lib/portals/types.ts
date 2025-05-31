@@ -23,20 +23,22 @@ export type PortalsToken = {
   tokens: string[];
   liquidity: number;
   metrics: {
-    apy: string;
-    baseApy: string;
-    volumeUsd1d: string;
-    volumeUsd7d: string;
+    apy?: string;
+    baseApy?: string;
+    volumeUsd1d?: string;
+    volumeUsd7d?: string;
   };
   metadata: {
-    tags: string[];
-    feePercentage: string;
+    tags?: string[];
+    feePercentage?: string;
   };
   tokenId: string;
   balanceUSD?: number;
   balance?: number;
   rawBalance?: string;
-  reserves: string[];
+  reserves?: string[];
+  totalSupply?: string;
+  circulatingSupply?: string;
 };
 
 export type UserBalances = {

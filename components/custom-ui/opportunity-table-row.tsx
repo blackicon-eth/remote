@@ -28,6 +28,8 @@ export const OpportunityTableRow = ({
     (position) => position.key === opportunity.key
   )?.balanceUSD;
 
+  const images = opportunity.images ?? [];
+
   return (
     <motion.button
       key={opportunity.key}
@@ -63,17 +65,16 @@ export const OpportunityTableRow = ({
 
         <div className="flex justify-start items-center shrink-0 w-[50%]">
           <div className="flex justify-center items-center w-[96px]">
-            {opportunity.images.slice(1).map((image, index) => (
+            {images.slice(1).map((image, index) => (
               <img
                 key={index}
                 src={image}
                 alt={opportunity.name}
                 className="rounded-full object-cover"
                 style={{
-                  marginLeft:
-                    index === 0 ? 0 : opportunity.images.length > 4 ? -20 : -14,
-                  width: opportunity.images.length === 2 ? "40px" : "35px",
-                  height: opportunity.images.length === 2 ? "40px" : "35px",
+                  marginLeft: index === 0 ? 0 : images.length > 4 ? -20 : -14,
+                  width: images.length === 2 ? "40px" : "35px",
+                  height: images.length === 2 ? "40px" : "35px",
                 }}
               />
             ))}
@@ -82,7 +83,7 @@ export const OpportunityTableRow = ({
             <div className="text-white text-[15px]">{opportunity.name}</div>
             <div className="flex justify-start items-center gap-1">
               <img
-                src={opportunity.images[0]}
+                src={images[0]}
                 alt={opportunity.name}
                 className="rounded-full object-cover size-[16px]"
               />
