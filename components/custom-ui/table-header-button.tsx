@@ -1,12 +1,14 @@
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown } from "lucide-react";
+import { SortingDirections } from "@/lib/enums";
+import { SortingColumns } from "@/lib/enums";
 
 interface TableHeaderButtonProps {
   text: string;
-  sortColumn: "apy" | "liquidity" | null;
-  sortDirection: "asc" | "desc" | null;
-  column: "apy" | "liquidity";
-  onSort: (column: "apy" | "liquidity") => void;
+  sortColumn: SortingColumns | null;
+  sortDirection: SortingDirections | null;
+  column: SortingColumns;
+  onSort: (column: SortingColumns) => void;
   sortable?: boolean;
 }
 
