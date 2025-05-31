@@ -191,8 +191,8 @@ export const POST = async (request: NextRequest) => {
           const sourceInputAmount = sourceInputAmountBigInt.toString();
           console.log("sourceInputAmount", sourceInputAmount);
 
-          //calculate adjInputAmount as input amount * 90%
-          const adjInputAmount = Number(req.inputAmount) * 0.9;
+          //calculate adjInputAmount as input amount * 70%
+          const adjInputAmount = Number(req.inputAmount) * 0.7;
           console.log("adjInputAmount", adjInputAmount);
 
           // Convert input amount to the proper decimal format
@@ -279,7 +279,7 @@ export const POST = async (request: NextRequest) => {
                   args: [
                     stargateAddress as `0x${string}`, // _stargate address
                     chainIdToEid(req.destinationChainId)!, // _dstEid from constants
-                    sourceInputAmountBigInt, // _amount is 90% of original input amount
+                    sourceInputAmountBigInt, // _amount is 70% of original input amount
                     req.smartAccount as `0x${string}`, // _composer as smart account
                     composeMsg as `0x${string}`, // _composeMsg
                     BigInt(2000000), // 2m gas limit
