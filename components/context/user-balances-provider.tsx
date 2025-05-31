@@ -10,8 +10,9 @@ import {
   type ReactNode,
 } from "react";
 import ky from "ky";
-import { useAppKitAccount } from "@reown/appkit/react";
+import { useAppKitAccount, useAppKitState } from "@reown/appkit/react";
 import { UserTokens } from "@/lib/types";
+import { networks } from "@/lib/appkit";
 
 interface UserBalancesContextType {
   userTokens: UserTokens | undefined;
@@ -27,6 +28,13 @@ const UserBalancesContext = createContext<UserBalancesContextType | undefined>(
 
 export function UserBalancesProvider({ children }: { children: ReactNode }) {
   const { address } = useAppKitAccount();
+  const { selectedNetworkId } = useAppKitState();
+
+  const sanitizedNetworkId = selectedNetworkId?.split(":")[1] ?? "0";
+
+  const selectedNetworkName = networks.find(
+    (network) => network.id === Number(sanitizedNetworkId)
+  )?.name;
 
   const {
     data: userBalances,
@@ -40,22 +48,37 @@ export function UserBalancesProvider({ children }: { children: ReactNode }) {
     queryFn: async () => {
       return await ky
         .get<PortalsToken[]>("/api/portals/account", {
-          searchParams: { address: address! },
+          searchParams: {
+            address: address!,
+            networkId: sanitizedNetworkId,
+          },
         })
         .json();
     },
     enabled: !!address,
   });
 
+  // Refetch the user balances when the network changes
+  useEffect(() => {
+    if (address) {
+      refetchUserTokens();
+    }
+  }, [selectedNetworkId]);
+
   const userTokens = useMemo(() => {
     if (!userBalances) return undefined;
 
     return {
       tokens: userBalances?.filter(
-        (token) => token.platform === "native" || token.platform === "basic"
+        (token) =>
+          selectedNetworkName === token.network &&
+          (token.platform === "native" || token.platform === "basic")
       ),
       positions: userBalances?.filter(
-        (token) => token.platform !== "native" && token.platform !== "basic"
+        (token) =>
+          selectedNetworkName !== token.network &&
+          token.platform !== "native" &&
+          token.platform !== "basic"
       ),
     };
   }, [userBalances]);

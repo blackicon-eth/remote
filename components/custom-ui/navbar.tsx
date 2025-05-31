@@ -17,6 +17,13 @@ import {
 } from "@/components/shadcn-ui/dropdown-menu";
 import { truncateAddress } from "@/lib/utils";
 import { getEnsNameAndAvatar } from "@/lib/ens";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/shadcn-ui/dialog";
+import { formatNumber } from "@/lib/utils";
 
 export const Navbar = () => {
   const [ensInfo, setEnsInfo] = useState<{
@@ -26,10 +33,11 @@ export const Navbar = () => {
     ensName: null,
     avatar: null,
   });
-  const { cart } = useCart();
+  const { cart, removeFromCart } = useCart();
   const { open } = useAppKit();
   const { isConnected, address } = useAppKitAccount();
   const { disconnect } = useDisconnect();
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   // Get the ENS name for the address
   useEffect(() => {
@@ -44,9 +52,8 @@ export const Navbar = () => {
   const isCartFilled = useMemo(() => cart.length > 0, [cart]);
 
   const handleCartOpen = () => {
-    if (isConnected) {
-      // TODO: Open the cart
-      return;
+    if (isConnected && isCartFilled) {
+      setIsCartOpen(true);
     } else if (isCartFilled && !isConnected) {
       open({ view: "Connect" });
     }
@@ -78,9 +85,9 @@ export const Navbar = () => {
                     className="cursor-pointer rounded-full"
                   >
                     <HoverBorderGradient
-                      containerClassName="rounded-full"
+                      containerClassName="rounded-full h-[40px]"
+                      className="bg-neutral-900 text-white flex items-center h-[40px] gap-2 py-0"
                       as="div"
-                      className="bg-neutral-900 text-white h-10 flex items-center gap-2"
                     >
                       {ensInfo.avatar && (
                         <img
@@ -123,9 +130,9 @@ export const Navbar = () => {
               onClick={() => open({ view: "Connect" })}
             >
               <HoverBorderGradient
-                containerClassName="rounded-full"
+                containerClassName="rounded-full h-[40px]"
                 as="div"
-                className="bg-neutral-900 text-white flex items-center"
+                className="bg-neutral-900 text-white flex items-center h-[40px] gap-2 py-0"
               >
                 <span>Connect Wallet</span>
               </HoverBorderGradient>
@@ -161,6 +168,67 @@ export const Navbar = () => {
           </AnimatePresence>
         </motion.button>
       </div>
+
+      <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
+        <DialogContent className="bg-neutral-950 border-neutral-800 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex justify-center items-center text-2xl gap-2">
+              <ShoppingCart className="size-5" />
+              <span>Cart</span>
+            </DialogTitle>
+          </DialogHeader>
+          <AnimatePresence mode="wait">
+            {cart.length === 0 ? (
+              <motion.div
+                key="empty-cart"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex justify-center items-center"
+              >
+                <p>No items in cart</p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="filled-cart"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col gap-4"
+              >
+                <div className="flex flex-col gap-4">
+                  {cart.map((item) => (
+                    <div
+                      key={item.key}
+                      className="flex justify-between items-center p-4 border border-neutral-700 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="size-10 rounded-full object-cover"
+                        />
+                        <div>
+                          <p className="text-white font-medium">{item.name}</p>
+                          <p className="text-neutral-400 text-sm">
+                            ${formatNumber(item.price)}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeFromCart(item)}
+                        className="text-red-500 hover:text-red-400 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </DialogContent>
+      </Dialog>
     </motion.nav>
   );
 };
