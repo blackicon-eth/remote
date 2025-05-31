@@ -11,6 +11,19 @@ export enum ListModes {
   ALL_POSITIONS = "all-positions",
 }
 
+// Sorting directions
+export enum SortingDirections {
+  ASC = "asc",
+  DESC = "desc",
+}
+
+// Sorting columns
+export enum SortingColumns {
+  APY = "apy",
+  LIQUIDITY = "liquidity",
+  DEPOSITED = "deposit",
+}
+
 // Alchemy RPC Base URLs
 export enum AlchemyRpcBaseUrls {
   "ethereum" = "https://eth-mainnet.g.alchemy.com/v2",

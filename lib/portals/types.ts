@@ -32,6 +32,9 @@ export type PortalsToken = {
     feePercentage: string;
   };
   tokenId: string;
+  balanceUSD?: number;
+  balance?: number;
+  rawBalance?: string;
   reserves: string[];
 };
 
