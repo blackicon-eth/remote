@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import { headers } from "next/headers";
+import { Toaster } from "@/components/shadcn-ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,7 +34,10 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-neutral-900`}
       >
-        <Providers cookies={cookies}>{children}</Providers>
+        <Providers cookies={cookies}>
+          {children}
+          <Toaster richColors position="top-left" />
+        </Providers>
       </body>
     </html>
   );

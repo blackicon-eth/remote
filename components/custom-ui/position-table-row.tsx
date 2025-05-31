@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "../shadcn-ui/select";
 import { RemoteButton } from "./remote-button";
+import { useAppKitState } from "@reown/appkit/react";
 
 interface PositionTableRowProps {
   position: PortalsToken;
@@ -35,13 +36,14 @@ export const PositionTableRow = ({
   index,
 }: PositionTableRowProps) => {
   const { userTokens } = useUserBalances();
+  const { selectedNetworkId } = useAppKitState();
   const [amount, setAmount] = useState<string>("");
   const [selectedDepositToken, setSelectedDepositToken] =
     useState<PortalsToken | null>(null);
   const [selectedMode, setSelectedMode] = useState<"deposit" | "withdraw">(
     "deposit"
   );
-
+  const [isModalOpen, setIsModalOpen] = useState(false);
   // If the position has images, use them, otherwise use the single image
   const positionImages = position.images ?? [position.image];
 
@@ -55,8 +57,14 @@ export const PositionTableRow = ({
     setAmount("");
   }, [selectedMode]);
 
+  // When the connected network changes, close the modal
+  useEffect(() => {
+    setSelectedDepositToken(null);
+    setIsModalOpen(false);
+  }, [selectedNetworkId]);
+
   return (
-    <Dialog>
+    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
       <DialogTrigger asChild>
         <motion.button
           key={position.key}
@@ -197,32 +205,38 @@ export const PositionTableRow = ({
                         }
                       }}
                     />
-                    <Select
-                      value={selectedDepositToken?.key}
-                      onValueChange={(value) =>
-                        setSelectedDepositToken(
-                          filteredUserTokens?.find(
-                            (token) => token.key === value
-                          ) ?? null
-                        )
-                      }
-                    >
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Select Token" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredUserTokens?.map((token) => (
-                          <SelectItem key={token.key} value={token.key}>
-                            <img
-                              src={token.image}
-                              alt={token.symbol}
-                              className="rounded-full object-cover size-[20px]"
-                            />
-                            {token.symbol}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {filteredUserTokens && filteredUserTokens?.length > 0 ? (
+                      <Select
+                        value={selectedDepositToken?.key}
+                        onValueChange={(value) =>
+                          setSelectedDepositToken(
+                            filteredUserTokens?.find(
+                              (token) => token.key === value
+                            ) ?? null
+                          )
+                        }
+                      >
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue placeholder="Select Token" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredUserTokens?.map((token) => (
+                            <SelectItem key={token.key} value={token.key}>
+                              <img
+                                src={token.image}
+                                alt={token.symbol}
+                                className="rounded-full object-cover size-[20px]"
+                              />
+                              {token.symbol}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="w-[200px] text-end text-neutral-400 text-sm leading-none">
+                        You have no tokens on this network
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex justify-between items-center w-full pl-2 pr-1">

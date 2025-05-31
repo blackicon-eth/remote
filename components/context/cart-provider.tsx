@@ -1,7 +1,15 @@
 "use client";
 
 import { PortalsToken } from "@/lib/portals/types";
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { toast } from "sonner";
 
 interface CartContextType {
   cart: PortalsToken[];
@@ -17,7 +25,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Add an element to the cart
   const addToCart = useCallback(
     (token: PortalsToken) => {
-      setCart([...cart, token]);
+      if (cart.length < 3) {
+        setCart([...cart, token]);
+      } else {
+        toast.error("You can only add up to 3 tokens to the cart");
+      }
     },
     [cart]
   );
