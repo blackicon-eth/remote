@@ -1509,3 +1509,15 @@ export const REMOTE_ACCOUNT_ABI = [
       "type": "receive"
     }
 ] as const;
+
+
+// Contract ABI for getAccount function
+export const REMOTE_ACCOUNT_FACTORY_ABI = [
+    {
+      inputs: [{ name: "owner", type: "address" }],
+      name: "getAccount",
+      outputs: [{ name: "", type: "address" }],
+      stateMutability: "view",
+      type: "function",
+    },
+  ] as const;
