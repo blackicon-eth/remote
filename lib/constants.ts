@@ -453,3 +453,68 @@ export const isTokenUsdc = (tokenAddress: string): boolean => {
     return false;
   }
 };
+
+// Function to get equivalent token address on a target chain
+export const getEquivalentTokenAddress = (
+  tokenAddress: string,
+  targetChainId: number | string
+): string | null => {
+  try {
+    const chainId =
+      typeof targetChainId === "string"
+        ? parseInt(targetChainId, 10)
+        : targetChainId;
+
+    // Check if the input token is USDC
+    const isUsdc = isTokenUsdc(tokenAddress);
+
+    // Define token addresses by chain
+    const TOKEN_ADDRESSES_BY_CHAIN: Record<
+      number,
+      { usdc: string; weth: string }
+    > = {
+      // Base (8453)
+      8453: {
+        usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        weth: "0x0000000000000000000000000000000000000000", // Native ETH
+      },
+      // Arbitrum (42161)
+      42161: {
+        usdc: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        weth: "0x0000000000000000000000000000000000000000", // Native ETH
+      },
+      // Flow (747)
+      747: {
+        usdc: FLOW_USDC_ADDRESS,
+        weth: FLOW_WETH_ADDRESS,
+      },
+      // Flare (14)
+      14: {
+        usdc: FLARE_USDC_ADDRESS,
+        weth: FLARE_WETH_ADDRESS,
+      },
+      // Rootstock (30)
+      30: {
+        usdc: ROOTSTOCK_USDC_ADDRESS,
+        weth: ROOTSTOCK_WETH_ADDRESS,
+      },
+    };
+
+    // Check if target chain is supported
+    if (!TOKEN_ADDRESSES_BY_CHAIN[chainId]) {
+      console.error(`Unsupported target chain ID: ${chainId}`);
+      return null;
+    }
+
+    // Return the equivalent token address on the target chain
+    if (isUsdc) {
+      return TOKEN_ADDRESSES_BY_CHAIN[chainId].usdc;
+    } else {
+      // Assume it's WETH if not USDC
+      return TOKEN_ADDRESSES_BY_CHAIN[chainId].weth;
+    }
+  } catch (error) {
+    console.error("Error getting equivalent token address:", error);
+    return null;
+  }
+};
