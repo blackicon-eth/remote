@@ -7,14 +7,14 @@ import { cn, formatNumber, platformNameFormatter } from "@/lib/utils";
 
 interface OpportunityTableRowProps {
   opportunity: PortalsToken;
-  index: number;
   isLast: boolean;
+  index: number;
 }
 
 export const OpportunityTableRow = ({
   opportunity,
-  index,
   isLast,
+  index,
 }: OpportunityTableRowProps) => {
   const { cart, addToCart, removeFromCart } = useCart();
 
@@ -38,7 +38,7 @@ export const OpportunityTableRow = ({
       <div
         className={cn(
           "relative flex justify-between items-center w-full py-5 px-2 border-b border-neutral-700 transition-all duration-500",
-          isLast && "border-b-0",
+          isLast && index > 4 && "border-b-0",
           cart.some((t) => t.key === opportunity.key) && "bg-neutral-600/30"
         )}
       >
