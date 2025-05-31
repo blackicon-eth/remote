@@ -42,6 +42,7 @@ export const MyPositionsContainer = ({
 
     // Apply sorting if a column is selected
     if (filtered && sortColumn && sortDirection) {
+      console.log("Sorting triggered:", { sortColumn, sortDirection });
       filtered = [...filtered].sort((a, b) => {
         let aValue: number;
         let bValue: number;
@@ -49,6 +50,9 @@ export const MyPositionsContainer = ({
         if (sortColumn === SortingColumns.APY) {
           aValue = Number.parseFloat(a.metrics.apy);
           bValue = Number.parseFloat(b.metrics.apy);
+        } else if (sortColumn === SortingColumns.DEPOSITED) {
+          aValue = a.balanceUSD || 0;
+          bValue = b.balanceUSD || 0;
         } else {
           aValue = a.liquidity;
           bValue = b.liquidity;

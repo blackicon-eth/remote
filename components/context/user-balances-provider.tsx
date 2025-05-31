@@ -60,10 +60,6 @@ export function UserBalancesProvider({ children }: { children: ReactNode }) {
     };
   }, [userBalances]);
 
-  useEffect(() => {
-    console.log(userBalances);
-  }, [userBalances]);
-
   const value = useMemo(
     () => ({
       userTokens,

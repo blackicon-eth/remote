@@ -13,7 +13,7 @@ import {
 } from "@/lib/enums";
 import { ChainColors, ChainImages } from "@/lib/constants";
 import { AnimatePresence, motion } from "motion/react";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PlaceholdersAndVanishInput } from "@/components/aceternity-ui/placeholder-vanish-input";
 import { TableHeaderButton } from "@/components/custom-ui/table-header-button";
 import { MyPositionsContainer } from "@/components/custom-ui/my-positions-container";
@@ -50,6 +50,7 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  // Changes the sort direction of the table
   const handleSort = useCallback(
     (column: SortingColumns) => {
       if (sortColumn === column) {
@@ -150,7 +151,6 @@ export default function Home() {
                     sortDirection={sortDirection}
                     column={SortingColumns.DEPOSITED}
                     onSort={handleSort}
-                    sortable={false}
                   />
                   <TableHeaderButton
                     text="Current APY"

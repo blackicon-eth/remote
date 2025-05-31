@@ -4,6 +4,7 @@ import { PortalsToken } from "@/lib/portals/types";
 import { ChainImages } from "@/lib/constants";
 import { SupportedNetworks } from "@/lib/enums";
 import { cn, formatNumber, platformNameFormatter } from "@/lib/utils";
+import { useUserBalances } from "../context/user-balances-provider";
 
 interface OpportunityTableRowProps {
   opportunity: PortalsToken;
@@ -17,6 +18,15 @@ export const OpportunityTableRow = ({
   index,
 }: OpportunityTableRowProps) => {
   const { cart, addToCart, removeFromCart } = useCart();
+  const { userTokens } = useUserBalances();
+
+  const isThisAUserPosition = userTokens?.positions?.some(
+    (position) => position.key === opportunity.key
+  );
+
+  const userPositionBalanceUSD = userTokens?.positions?.find(
+    (position) => position.key === opportunity.key
+  )?.balanceUSD;
 
   return (
     <motion.button
@@ -84,7 +94,9 @@ export const OpportunityTableRow = ({
         </div>
         <div className="flex justify-between items-center shrink-0 w-[500px] text-white text-sm pr-10">
           <div className="flex justify-center items-center w-[25%] text-[15px] font-medium">
-            $0
+            {isThisAUserPosition
+              ? `$${formatNumber(userPositionBalanceUSD ?? 0)}`
+              : "$0"}
           </div>
           <div className="flex justify-center items-center w-[25%] text-[15px] font-medium">
             {opportunity.metrics.apy}%

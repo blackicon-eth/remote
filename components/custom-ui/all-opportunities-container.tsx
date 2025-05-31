@@ -7,6 +7,7 @@ import {
   SortingDirections,
   SupportedNetworks,
 } from "@/lib/enums";
+import { useUserBalances } from "../context/user-balances-provider";
 
 interface AllOpportunitiesContainerProps {
   debouncedSearch: string;
@@ -22,9 +23,19 @@ export const AllOpportunitiesContainer = ({
   sortDirection,
 }: AllOpportunitiesContainerProps) => {
   const { opportunities } = useOpportunities();
+  const { userTokens } = useUserBalances();
+
+  const opportunitiesWithBalanceUSD = useMemo(() => {
+    return opportunities?.map((opportunity) => ({
+      ...opportunity,
+      balanceUSD: userTokens?.positions?.find(
+        (position) => position.key === opportunity.key
+      )?.balanceUSD,
+    }));
+  }, [opportunities, userTokens]);
 
   const filteredOpportunities = useMemo(() => {
-    let filtered = opportunities?.filter(
+    let filtered = opportunitiesWithBalanceUSD?.filter(
       (opportunity) =>
         (opportunity.name
           .toLowerCase()
@@ -44,6 +55,9 @@ export const AllOpportunitiesContainer = ({
         if (sortColumn === SortingColumns.APY) {
           aValue = Number.parseFloat(a.metrics.apy);
           bValue = Number.parseFloat(b.metrics.apy);
+        } else if (sortColumn === SortingColumns.DEPOSITED) {
+          aValue = a.balanceUSD || 0;
+          bValue = b.balanceUSD || 0;
         } else {
           aValue = a.liquidity;
           bValue = b.liquidity;
@@ -59,7 +73,7 @@ export const AllOpportunitiesContainer = ({
 
     return filtered;
   }, [
-    opportunities,
+    opportunitiesWithBalanceUSD,
     debouncedSearch,
     selectedChains,
     sortColumn,
