@@ -114,7 +114,7 @@ export const MyPositionsContainer = ({
             className="flex justify-center items-center w-full h-full"
           >
             <h2 className="text-xl md:text-3xl md:leading-tight max-w-5xl mx-auto text-center tracking-tight font-medium bg-clip-text text-transparent bg-gradient-to-b from-neutral-800 via-white to-white flex items-center gap-2 md:gap-8">
-              No results found :(
+              No positions found :(
             </h2>
           </motion.div>
         ) : (
