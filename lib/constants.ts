@@ -1,5 +1,5 @@
 import { SupportedNetworks } from "./enums";
-import { createPublicClient, http, erc20Abi, Chain } from "viem";
+import { createPublicClient, http, erc20Abi, Chain, getAddress } from "viem";
 import { base, arbitrum, polygon, flowMainnet, mainnet } from "viem/chains";
 
 // Supported Networks
@@ -218,9 +218,6 @@ export const getTokenDecimals = async (
       chain,
       transport: http(getRpcUrl(id)),
     });
-    console.log("tokenAddress", tokenAddress);
-    console.log("chainId", chainId);
-    console.log("chain", chain.name);
 
     // Read decimals from the token contract
     const decimals = await client.readContract({
@@ -238,5 +235,162 @@ export const getTokenDecimals = async (
     );
     // Return default decimals (18) if we can't read from contract
     return 18;
+  }
+};
+
+//STARGATE CONSTANTS
+
+// Endpoints
+export const BASE_ENDPOINT =
+  "0x1a44076050125825900e736c501f859c50fE728c" as const;
+export const ARB_ENDPOINT =
+  "0x1a44076050125825900e736c501f859c50fE728c" as const;
+export const FLOW_ENDPOINT =
+  "0xcb566e3B6934Fa77258d68ea18E931fa75e1aaAa" as const;
+export const FLARE_ENDPOINT =
+  "0x1a44076050125825900e736c501f859c50fE728c" as const;
+export const ROOTSTOCK_ENDPOINT =
+  "0xcb566e3B6934Fa77258d68ea18E931fa75e1aaAa" as const;
+
+// Chain EIDs
+export const BASE_CHAIN_EID = 30184 as const;
+export const ARB_CHAIN_EID = 30110 as const;
+export const FLOW_CHAIN_EID = 30336 as const;
+export const FLARE_CHAIN_EID = 30295 as const;
+export const ROOTSTOCK_CHAIN_EID = 30333 as const;
+
+// Chain ID to EID mapping
+export const CHAIN_ID_TO_EID: Record<number, number> = {
+  8453: BASE_CHAIN_EID, // Base
+  42161: ARB_CHAIN_EID, // Arbitrum
+  747: FLOW_CHAIN_EID, // Flow
+  14: FLARE_CHAIN_EID, // Flare
+  30: ROOTSTOCK_CHAIN_EID, // Rootstock
+  137: 30109, // Polygon (add if needed)
+};
+
+export const chainIdToEid = (chainId: number | string): number | null => {
+  const id = typeof chainId === "string" ? parseInt(chainId, 10) : chainId;
+  return CHAIN_ID_TO_EID[id] || null;
+};
+
+// Chain IDs
+export const BASE_CHAIN_ID = 8453 as const;
+export const ARB_CHAIN_ID = 42161 as const;
+export const FLOW_CHAIN_ID = 747 as const;
+export const FLARE_CHAIN_ID = 14 as const;
+export const ROOTSTOCK_CHAIN_ID = 30 as const;
+
+// Base Stargate Pools
+export const BASE_STARGATE_POOL_NATIVE =
+  "0xdc181Bd607330aeeBEF6ea62e03e5e1Fb4B6F7C7" as const;
+export const BASE_STARGATE_POOL_USDC =
+  "0x27a16dc786820B16E5c9028b75B99F6f604b5d26" as const;
+
+// Arbitrum Stargate Pools
+export const ARB_STARGATE_POOL_NATIVE =
+  "0xA45B5130f36CDcA45667738e2a258AB09f4A5f7F" as const;
+export const ARB_STARGATE_POOL_USDC =
+  "0xe8CDF27AcD73a434D661C84887215F7598e7d0d3" as const;
+
+// Flow Stargate Pools
+export const FLOW_STARGATE_OFT_ETH =
+  "0x45f1A95A4D3f3836523F5c83673c797f4d4d263B" as const;
+export const FLOW_STARGATE_POOL_USDC =
+  "0xAF54BE5B6eEc24d6BFACf1cce4eaF680A8239398" as const;
+
+// Flare Stargate Pools
+export const FLARE_STARGATE_OFT_ETH =
+  "0x8e8539e4CcD69123c623a106773F2b0cbbc58746" as const;
+export const FLARE_STARGATE_OFT_USDC =
+  "0x77C71633C34C3784ede189d74223122422492a0f" as const;
+
+// Rootstock Stargate Pools
+export const ROOTSTOCK_STARGATE_OFT_ETH =
+  "0x45f1A95A4D3f3836523F5c83673c797f4d4d263B" as const;
+export const ROOTSTOCK_STARGATE_OFT_USDC =
+  "0xAF54BE5B6eEc24d6BFACf1cce4eaF680A8239398" as const;
+
+// Stargate Pool/OFT Mapping
+// Key format: "chainId:tokenAddress" -> Stargate pool/OFT address
+export const STARGATE_POOL_MAPPING: Record<string, string> = {
+  // Base Chain (8453)
+  "8453:0x0000000000000000000000000000000000000000": BASE_STARGATE_POOL_NATIVE, // ETH
+  "8453:native": BASE_STARGATE_POOL_NATIVE, // ETH (alternative key)
+  "8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": BASE_STARGATE_POOL_USDC, // USDC
+
+  // Arbitrum Chain (42161)
+  "42161:0x0000000000000000000000000000000000000000": ARB_STARGATE_POOL_NATIVE, // ETH
+  "42161:native": ARB_STARGATE_POOL_NATIVE, // ETH (alternative key)
+  "42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831": ARB_STARGATE_POOL_USDC, // USDC
+
+  // Flow Chain (747)
+  "747:0x2F6F07CDcf3588944Bf4C42aC74ff24bF56e7590": FLOW_STARGATE_OFT_ETH, // ETH
+  "747:native": FLOW_STARGATE_OFT_ETH, // ETH (alternative key)
+  "747:0xF1815bd50389c46847f0Bda824eC8da914045D14": FLOW_STARGATE_POOL_USDC, // USDC
+
+  // Flare Chain (14)
+  "14:0x1502FA4be69d526124D453619276FacCab275d3D": FLARE_STARGATE_OFT_ETH, // ETH
+  "14:native": FLARE_STARGATE_OFT_ETH, // ETH (alternative key)
+  "14:0xFbDa5F676cB37624f28265A144A48B0d6e87d3b6": FLARE_STARGATE_OFT_USDC, // USDC
+
+  // Rootstock Chain (30)
+  "30:0x45f1A95A4D3f3836523F5c83673c797f4d4d263B": ROOTSTOCK_STARGATE_OFT_ETH, // ETH
+  "30:native": ROOTSTOCK_STARGATE_OFT_ETH, // ETH (alternative key)
+  "30:0x74c9f2b00581f1b11aa7ff05aa9f608b7389de67": ROOTSTOCK_STARGATE_OFT_USDC, // USDC
+};
+
+export const getStargateAddress = (
+  chainId: number | string,
+  tokenAddress: string
+): string | null => {
+  const id = typeof chainId === "string" ? parseInt(chainId, 10) : chainId;
+
+  // Handle native token (zero address or "native")
+  if (
+    tokenAddress === "0x0000000000000000000000000000000000000000" ||
+    tokenAddress.toLowerCase() === "native"
+  ) {
+    const nativeKey = `${id}:native`;
+    const zeroAddressKey = `${id}:0x0000000000000000000000000000000000000000`;
+    return (
+      STARGATE_POOL_MAPPING[nativeKey] ||
+      STARGATE_POOL_MAPPING[zeroAddressKey] ||
+      null
+    );
+  }
+
+  try {
+    // Normalize the input address using viem's getAddress
+    const normalizedInputAddress = getAddress(tokenAddress);
+
+    // Check all entries in the mapping for this chain
+    for (const [key, stargateAddress] of Object.entries(
+      STARGATE_POOL_MAPPING
+    )) {
+      const [mapChainId, mapTokenAddress] = key.split(":");
+
+      if (parseInt(mapChainId) === id && mapTokenAddress !== "native") {
+        try {
+          // Normalize the address from the mapping
+          const normalizedMapAddress = getAddress(mapTokenAddress);
+
+          // Compare normalized addresses
+          if (normalizedInputAddress === normalizedMapAddress) {
+            console.log("Found match:", key, "->", stargateAddress);
+            return stargateAddress;
+          }
+        } catch (error) {
+          // Skip invalid addresses in the mapping
+          continue;
+        }
+      }
+    }
+
+    console.log("No match found for", id, normalizedInputAddress);
+    return null;
+  } catch (error) {
+    console.error("Invalid address format:", tokenAddress, error);
+    return null;
   }
 };
