@@ -6,13 +6,20 @@ import {
   PortalsToken,
   RequestBody,
 } from "./portals/types";
-import { Address, createPublicClient, erc20Abi, getAddress, http } from "viem";
+import {
+  Address,
+  createPublicClient,
+  erc20Abi,
+  getAddress,
+  Hex,
+  http,
+} from "viem";
 import { networks } from "./appkit";
 import { flare } from "viem/chains";
-import { AlchemyRpcBaseUrls, ChainIds } from "./enums";
+import { AlchemyRpcBaseUrls, ChainIds, TransactionStatus } from "./enums";
 import { env } from "./zod";
 import ky from "ky";
-import { CartItemStates } from "./types";
+import { CartItemStates, ContractParams, TransactionStep } from "./types";
 import { getEquivalentTokenAddress } from "./constants";
 
 export function cn(...inputs: ClassValue[]) {
@@ -107,12 +114,7 @@ export const generateApproveSteps = async (
     transport: http(rpcUrl),
   });
 
-  let approveSteps: {
-    title: string;
-    description: string;
-    status: "pending" | "success" | "error";
-    token: PortalsToken | null;
-  }[] = [];
+  let approveSteps: TransactionStep[] = [];
 
   // Create a list of source tokens
   let sourceTokens: string[] = [];
@@ -127,6 +129,11 @@ export const generateApproveSteps = async (
 
   // Check for each token if the user has enough allowance
   for (const token of sourceTokens) {
+    const tokenState = Object.values(cartItemStates).find(
+      (item) =>
+        item.selectedToken?.address.toLowerCase() === token.toLowerCase()
+    );
+
     const allowance = Number(
       await publicClient.readContract({
         address: getAddress(token.toLowerCase() as Address),
@@ -138,10 +145,14 @@ export const generateApproveSteps = async (
 
     if (allowance === 0) {
       approveSteps.push({
-        title: "Approve",
-        description: "Approve the smart wallet to spend the tokens",
-        status: "pending",
-        token: cartItemStates[token].selectedToken,
+        type: "approve",
+        status: TransactionStatus.TO_SEND,
+        originTransaction: null,
+        allowanceAmount: BigInt(
+          "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        ),
+        asset: tokenState?.selectedToken!,
+        spender: smartAccountAddress,
       });
     }
   }
@@ -192,4 +203,34 @@ export const generateTransactionStep = async (
     .json();
 
   return response.transactionCalldataToExecute;
+};
+
+/**
+ * Extracts the parameters for a transaction step
+ * @param step - The transaction step
+ * @param chainId - The chain id
+ * @returns The parameters for the transaction step
+ */
+export const extractStepParams = (
+  step: TransactionStep,
+  networkId: string
+): ContractParams => {
+  if (step.type === "approve") {
+    return {
+      abi: erc20Abi,
+      functionName: "approve",
+      address: step.asset.address as Address,
+      args: [step.spender as Address, step.allowanceAmount],
+      chainId: Number(networkId),
+    };
+  } else {
+    // TODO: Do this
+    return {
+      abi: erc20Abi,
+      functionName: "transfer",
+      address: step.asset.address as Address,
+      args: [step.asset.address as Address, BigInt(step.allowanceAmount ?? 0)],
+      chainId: Number(networkId),
+    };
+  }
 };

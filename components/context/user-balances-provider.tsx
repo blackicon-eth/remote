@@ -105,6 +105,7 @@ export function UserBalancesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const deploySentinelContract = async () => {
       if (
+        !!address &&
         sentinelContractAddress === EMPTY_ADDRESS &&
         !isLoadingSentinelContractAddress &&
         !isErrorSentinelContractAddress
@@ -112,7 +113,7 @@ export function UserBalancesProvider({ children }: { children: ReactNode }) {
         await ky
           .post("/api/remote/deploy", {
             json: {
-              address: address!,
+              userAddress: address!,
             },
             timeout: false,
           })

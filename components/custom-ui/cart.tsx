@@ -18,6 +18,7 @@ import {
 } from "../shadcn-ui/select";
 import { Trash2 } from "lucide-react";
 import {
+  extractStepParams,
   formatNumber,
   generateApproveSteps,
   generateTransactionStep,
@@ -33,8 +34,10 @@ import {
 } from "@reown/appkit/react";
 import { useUserBalances } from "../context/user-balances-provider";
 import { RemoteButton } from "./remote-button";
-import { Address } from "viem";
+import { Address, Hex } from "viem";
 import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { TransactionStep } from "@/lib/types";
+import { TransactionStatus } from "@/lib/enums";
 
 enum CartStatus {
   COMPILING = "compiling",
@@ -75,6 +78,39 @@ export const Cart = () => {
   const [cartStatus, setCartStatus] = useState<CartStatus>(
     CartStatus.COMPILING
   );
+  const [transactionSteps, setTransactionSteps] = useState<TransactionStep[]>(
+    []
+  );
+  const [isFinished, setIsFinished] = useState(false);
+
+  // Function to change the status of a transaction step
+  const handleChangeStatus = (
+    index: number,
+    status: TransactionStatus,
+    originTransaction: { hash: Hex; link: string } | null
+  ) => {
+    setTransactionSteps((prevSteps) => {
+      const newSteps = [...prevSteps];
+      newSteps[index] = {
+        ...newSteps[index],
+        status,
+        originTransaction,
+      };
+      return newSteps;
+    });
+  };
+
+  // The current step
+  // (the step that is not yet successful)
+  const { currentStep, currentStepIndex } = useMemo(() => {
+    const currentStepIndex = transactionSteps.findIndex(
+      (step) => step.status !== TransactionStatus.SUCCESS
+    );
+    return {
+      currentStep: transactionSteps[currentStepIndex],
+      currentStepIndex,
+    };
+  }, [transactionSteps]);
 
   // wagmi hooks
   const {
@@ -87,25 +123,40 @@ export const Cart = () => {
       hash,
     });
 
+  // Whether there is an error
   const isGenericError = useMemo(
     () => isWalletError || isTxError,
     [isWalletError, isTxError]
   );
 
+  useEffect(() => {
+    console.log(cartItemStates);
+  }, [cartItemStates]);
+
   const buttonObject = useMemo(() => {
-    if (cartStatus === CartStatus.COMPILING) {
+    if (isGenericError) {
+      return {
+        text: "Retry",
+        onClick: () => {
+          triggerWriteContract(currentStep!);
+        },
+      };
+    } else if (cartStatus === CartStatus.COMPILING) {
       if (!userAddress) return;
       return {
-        text: "Compiling",
+        text: "Deposit",
         onClick: async () => {
           setIsLoading(true);
-          const approveSteps = await generateApproveSteps(
-            cartItemStates,
-            sanitizeNetworkId(selectedNetworkId),
-            userAddress as Address,
-            sentinelContractAddress?.address as Address
-          );
+          // const approveSteps = await generateApproveSteps(
+          //   cartItemStates,
+          //   sanitizeNetworkId(selectedNetworkId),
+          //   userAddress as Address,
+          //   sentinelContractAddress?.address as Address
+          // );
+          const approveSteps: any[] = [];
+          console.log("approveSteps", approveSteps);
           if (approveSteps.length > 0) {
+            setTransactionSteps(approveSteps);
             setCartStatus(CartStatus.APPROVING);
           } else {
             const callData = await generateTransactionStep(
@@ -113,31 +164,92 @@ export const Cart = () => {
               cartItemStates,
               sanitizeNetworkId(selectedNetworkId)
             );
+            console.log("callData", callData);
             setCartStatus(CartStatus.TRANSACTIONS);
           }
         },
       };
-    } else if (cartStatus === CartStatus.APPROVING) {
+    } else {
       return {
-        text: isTxError ? "Error" : "Approve",
+        text: "Close",
         onClick: () => {
-          // TODO: If error retry the approve transaction
-        },
-      };
-    } else if (cartStatus === CartStatus.TRANSACTIONS) {
-      return {
-        text: "Execute",
-        onClick: async () => {
-          const callData = await generateTransactionStep(
-            userAddress as Address,
-            cartItemStates,
-            sanitizeNetworkId(selectedNetworkId)
-          );
+          setIsCartOpen(false);
         },
       };
     }
-  }, [cartStatus]);
+  }, [
+    cartStatus,
+    userAddress,
+    cartItemStates,
+    selectedNetworkId,
+    isGenericError,
+  ]);
 
+  // If there is an error, stop the loading
+  useEffect(() => {
+    if (isGenericError) {
+      setIsLoading(false);
+    }
+  }, [isGenericError]);
+
+  // Function to trigger the write contract
+  const triggerWriteContract = async (step: TransactionStep) => {
+    setIsLoading(true);
+    // Update the status of the current step to awaiting confirmation
+    handleChangeStatus(
+      currentStepIndex,
+      TransactionStatus.AWAITING_CONFIRMATION,
+      null
+    );
+    // Extract the write contract params
+    const writeContractParams = extractStepParams(
+      step,
+      sanitizeNetworkId(selectedNetworkId)
+    );
+    writeContract(writeContractParams);
+  };
+
+  // Update the status of the current step to success
+  useEffect(() => {
+    if (isTxSuccess) {
+      const originTransaction = {
+        hash: hash!,
+        link: `${"TODO"}/tx/${hash}`,
+      };
+
+      // Update the status of the current step but still await for the transaction to be confirmed
+      // On the destination chain, the transaction will be confirmed when the intent is fulfilled
+      handleChangeStatus(
+        currentStepIndex,
+        TransactionStatus.SUCCESS,
+        originTransaction
+      );
+    }
+  }, [isTxSuccess]);
+
+  // Automatically start the transaction if the current step is to send
+  useEffect(() => {
+    // If there is no current step, set the process as finished and change the page state to payment completed
+    if (
+      transactionSteps.length > 0 &&
+      transactionSteps.every(
+        (step) => step.status === TransactionStatus.SUCCESS
+      )
+    ) {
+      setIsFinished(true);
+      setTimeout(() => {
+        setCartStatus(CartStatus.FINISHED);
+      }, 1250);
+      return;
+    }
+
+    // If the current step is to send, trigger the next step
+    if (currentStep && currentStep.status === TransactionStatus.TO_SEND) {
+      triggerWriteContract(currentStep);
+    }
+  }, [currentStep]);
+
+  // Debounce the cart item states
   const debouncedCartItemStates = useDebounce(cartItemStates, 300);
 
   // Get the user tokens he has in his wallet
@@ -227,6 +339,9 @@ export const Cart = () => {
           if (!open) {
             setTimeout(() => {
               setCartItemStates({});
+              setCartStatus(CartStatus.COMPILING);
+              setIsLoading(false);
+              setTransactionSteps([]);
             }, 300);
           }
         }}
@@ -254,184 +369,209 @@ export const Cart = () => {
               </motion.div>
             ) : (
               <motion.div
-                key="filled-cart"
+                key="cart-content"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex flex-col gap-6 mt-3"
+                className="flex flex-col gap-6 mt-3 p-1 overflow-hidden"
               >
-                <AnimatePresence>
-                  {cart.map((item) => (
+                <AnimatePresence mode="wait">
+                  {cartStatus === CartStatus.COMPILING ? (
                     <motion.div
-                      key={item.key}
-                      exit={{ opacity: 0 }}
-                      className="flex justify-center items-center w-full h-full"
+                      key="cart-items"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0, x: -100 }}
+                      className="flex flex-col gap-6"
                     >
-                      <div className="flex flex-col justify-center items-start w-full gap-2">
-                        <div className="flex justify-between items-center w-full px-1">
-                          <div className="flex justify-center items-center gap-1.5 text-sm text-neutral-400">
-                            <img
-                              src={item.images?.[0] ?? item.image}
-                              alt={item.name}
-                              className="rounded-full object-cover size-[22px]"
-                            />
-                            {item.name}
-                          </div>
-                          <motion.button
-                            whileHover={{ scale: 1.015 }}
-                            whileTap={{ scale: 0.985 }}
-                            className="text-xs bg-red-500 rounded-md py-0.5 px-2 hover:text-white transition-all duration-300 cursor-pointer flex justify-center items-center gap-1"
-                            onClick={() => {
-                              removeFromCart(item);
-                              setCartItemStates((prev) => {
-                                const newState = { ...prev };
-                                delete newState[item.key];
-                                return newState;
-                              });
-                            }}
-                          >
-                            <p>Remove</p>
-                            <Trash2 className="size-3.5" />
-                          </motion.button>
-                        </div>
-                        <div className="flex flex-col justify-center items-start w-full border border-neutral-700 rounded-lg p-4 h-[100px] gap-3">
-                          <div className="flex justify-between items-center w-full gap-2">
-                            <Input
-                              className="border-none md:text-xl font-medium"
-                              type="number"
-                              placeholder="0.00"
-                              value={cartItemStates[item.key]?.amount ?? ""}
-                              disabled={
-                                !cartItemStates[item.key]?.selectedToken
-                              }
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                setCartItemStates((prev) => ({
-                                  ...prev,
-                                  [item.key]: {
-                                    ...prev[item.key],
-                                    amount: value.startsWith("-")
-                                      ? ""
-                                      : Number(value) >
-                                        (cartItemStates[item.key]?.selectedToken
-                                          ?.balance ?? 0)
-                                      ? cartItemStates[
-                                          item.key
-                                        ]?.selectedToken?.balance?.toString() ??
-                                        "0"
-                                      : value === "" || Number(value) >= 0
-                                      ? value
-                                      : prev[item.key]?.amount ?? "",
-                                  },
-                                }));
-                              }}
-                            />
-                            <Select
-                              value={
-                                cartItemStates[item.key]?.selectedToken?.key
-                              }
-                              onValueChange={(value) =>
-                                setCartItemStates((prev) => ({
-                                  ...prev,
-                                  [item.key]: {
-                                    amount: "",
-                                    selectedToken:
-                                      userWalletTokens?.find(
-                                        (token) => token.key === value
-                                      ) ?? null,
-                                    opportunity: item,
-                                  },
-                                }))
-                              }
-                            >
-                              <SelectTrigger className="w-[200px]">
-                                <SelectValue placeholder="Select Token" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {userWalletTokens?.map((token) => (
-                                  <SelectItem key={token.key} value={token.key}>
-                                    <img
-                                      src={token.image}
-                                      alt={token.symbol}
-                                      className="rounded-full object-cover size-[20px]"
-                                    />
-                                    {token.symbol}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="flex justify-between items-center w-full pl-2 pr-1">
-                            <p className="text-xs text-neutral-400">
-                              $
-                              {formatNumber(
-                                Number(cartItemStates[item.key]?.amount ?? 0) *
-                                  (cartItemStates[item.key]?.selectedToken
-                                    ?.price ?? 0)
-                              )}
-                            </p>
-                            <div className="flex justify-center items-center gap-1">
-                              <p className="text-xs text-neutral-400">
-                                Available:
-                              </p>
-                              <p className="text-xs text-neutral-400">
-                                {formatNumber(
-                                  Number(
-                                    remainingTokenBalance[
-                                      cartItemStates[item.key]?.selectedToken
-                                        ?.key ?? ""
-                                    ] ?? 0
-                                  ),
-                                  4
-                                )}
-                              </p>
-                              <button
-                                className={cn(
-                                  "text-xs text-neutral-400 underline hover:text-white transition-all duration-300 cursor-pointer",
-                                  !cartItemStates[item.key]?.selectedToken &&
-                                    "hover:text-neutral-400 cursor-default no-underline"
-                                )}
-                                disabled={
-                                  !cartItemStates[item.key]?.selectedToken
-                                }
+                      {cart.map((item) => (
+                        <motion.div
+                          key={item.key}
+                          exit={{ opacity: 0 }}
+                          className="flex justify-center items-center w-full h-full"
+                        >
+                          <div className="flex flex-col justify-center items-start w-full gap-2">
+                            <div className="flex justify-between items-center w-full px-1">
+                              <div className="flex justify-center items-center gap-1.5 text-sm text-neutral-400">
+                                <img
+                                  src={item.images?.[0] ?? item.image}
+                                  alt={item.name}
+                                  className="rounded-full object-cover size-[22px]"
+                                />
+                                {item.name}
+                              </div>
+                              <motion.button
+                                whileHover={{ scale: 1.015 }}
+                                whileTap={{ scale: 0.985 }}
+                                className="text-xs bg-red-500 rounded-md py-0.5 px-2 hover:text-white transition-all duration-300 cursor-pointer flex justify-center items-center gap-1"
                                 onClick={() => {
-                                  const remainingBalance = Number(
-                                    remainingTokenBalance[
-                                      cartItemStates[item.key]?.selectedToken
-                                        ?.key ?? ""
-                                    ] ?? 0
-                                  );
-                                  if (remainingBalance > 0) {
-                                    const decimals =
-                                      cartItemStates[item.key]?.selectedToken
-                                        ?.decimals ?? 0;
+                                  removeFromCart(item);
+                                  setCartItemStates((prev) => {
+                                    const newState = { ...prev };
+                                    delete newState[item.key];
+                                    return newState;
+                                  });
+                                }}
+                              >
+                                <p>Remove</p>
+                                <Trash2 className="size-3.5" />
+                              </motion.button>
+                            </div>
+                            <div className="flex flex-col justify-center items-start w-full border border-neutral-700 rounded-lg p-4 h-[100px] gap-3">
+                              <div className="flex justify-between items-center w-full gap-2">
+                                <Input
+                                  className="border-none md:text-xl font-medium"
+                                  type="number"
+                                  placeholder="0.00"
+                                  value={cartItemStates[item.key]?.amount ?? ""}
+                                  disabled={
+                                    !cartItemStates[item.key]?.selectedToken
+                                  }
+                                  onChange={(e) => {
+                                    const value = e.target.value;
                                     setCartItemStates((prev) => ({
                                       ...prev,
                                       [item.key]: {
                                         ...prev[item.key],
-                                        amount: (
-                                          (Number(
-                                            cartItemStates[item.key]?.amount ??
-                                              0
-                                          ) *
-                                            10 ** decimals +
-                                            remainingBalance * 10 ** decimals) /
-                                          10 ** decimals
-                                        ).toString(),
+                                        amount: value.startsWith("-")
+                                          ? ""
+                                          : Number(value) >
+                                            (cartItemStates[item.key]
+                                              ?.selectedToken?.balance ?? 0)
+                                          ? cartItemStates[
+                                              item.key
+                                            ]?.selectedToken?.balance?.toString() ??
+                                            "0"
+                                          : value === "" || Number(value) >= 0
+                                          ? value
+                                          : prev[item.key]?.amount ?? "",
                                       },
                                     }));
+                                  }}
+                                />
+                                <Select
+                                  value={
+                                    cartItemStates[item.key]?.selectedToken?.key
                                   }
-                                }}
-                              >
-                                Max
-                              </button>
+                                  onValueChange={(value) =>
+                                    setCartItemStates((prev) => ({
+                                      ...prev,
+                                      [item.key]: {
+                                        amount: "",
+                                        selectedToken:
+                                          userWalletTokens?.find(
+                                            (token) => token.key === value
+                                          ) ?? null,
+                                        opportunity: item,
+                                      },
+                                    }))
+                                  }
+                                >
+                                  <SelectTrigger className="w-[200px]">
+                                    <SelectValue placeholder="Select Token" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {userWalletTokens?.map((token) => (
+                                      <SelectItem
+                                        key={token.key}
+                                        value={token.key}
+                                      >
+                                        <img
+                                          src={token.image}
+                                          alt={token.symbol}
+                                          className="rounded-full object-cover size-[20px]"
+                                        />
+                                        {token.symbol}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="flex justify-between items-center w-full pl-2 pr-1">
+                                <p className="text-xs text-neutral-400">
+                                  $
+                                  {formatNumber(
+                                    Number(
+                                      cartItemStates[item.key]?.amount ?? 0
+                                    ) *
+                                      (cartItemStates[item.key]?.selectedToken
+                                        ?.price ?? 0)
+                                  )}
+                                </p>
+                                <div className="flex justify-center items-center gap-1">
+                                  <p className="text-xs text-neutral-400">
+                                    Available:
+                                  </p>
+                                  <p className="text-xs text-neutral-400">
+                                    {formatNumber(
+                                      Number(
+                                        remainingTokenBalance[
+                                          cartItemStates[item.key]
+                                            ?.selectedToken?.key ?? ""
+                                        ] ?? 0
+                                      ),
+                                      4
+                                    )}
+                                  </p>
+                                  <button
+                                    className={cn(
+                                      "text-xs text-neutral-400 underline hover:text-white transition-all duration-300 cursor-pointer",
+                                      !cartItemStates[item.key]
+                                        ?.selectedToken &&
+                                        "hover:text-neutral-400 cursor-default no-underline"
+                                    )}
+                                    disabled={
+                                      !cartItemStates[item.key]?.selectedToken
+                                    }
+                                    onClick={() => {
+                                      const remainingBalance = Number(
+                                        remainingTokenBalance[
+                                          cartItemStates[item.key]
+                                            ?.selectedToken?.key ?? ""
+                                        ] ?? 0
+                                      );
+                                      if (remainingBalance > 0) {
+                                        const decimals =
+                                          cartItemStates[item.key]
+                                            ?.selectedToken?.decimals ?? 0;
+                                        setCartItemStates((prev) => ({
+                                          ...prev,
+                                          [item.key]: {
+                                            ...prev[item.key],
+                                            amount: (
+                                              (Number(
+                                                cartItemStates[item.key]
+                                                  ?.amount ?? 0
+                                              ) *
+                                                10 ** decimals +
+                                                remainingBalance *
+                                                  10 ** decimals) /
+                                              10 ** decimals
+                                            ).toString(),
+                                          },
+                                        }));
+                                      }
+                                    }}
+                                  >
+                                    Max
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
+                        </motion.div>
+                      ))}
                     </motion.div>
-                  ))}
+                  ) : (
+                    <motion.div>
+                      {transactionSteps.map((step, index) => (
+                        <div key={index}>
+                          <p>{step.status}</p>
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
                 </AnimatePresence>
                 <RemoteButton
                   className="flex justify-center items-center w-full rounded-lg h-[43px]"

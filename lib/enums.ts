@@ -5,6 +5,14 @@ export enum SupportedNetworks {
   POLYGON = "polygon",
 }
 
+// Transaction States
+export enum TransactionStatus {
+  TO_SEND = "to-send",
+  AWAITING_CONFIRMATION = "awaiting-confirmation",
+  SUCCESS = "success",
+  ERROR = "error",
+}
+
 // Chain IDs
 export enum ChainIds {
   "base" = 8453,
