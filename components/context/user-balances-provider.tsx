@@ -60,7 +60,6 @@ export function UserBalancesProvider({ children }: { children: ReactNode }) {
 
   // Refetch the user balances when the network changes
   useEffect(() => {
-    console.log("refetching user balances");
     if (address) {
       refetchUserTokens();
     }
