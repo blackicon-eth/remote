@@ -69,13 +69,13 @@ export function RemoteButton({
         }}
         onMouseLeave={() => setHovered(false)}
         className={cn(
-          "relative flex rounded-full border content-center bg-black/20 hover:bg-black/10 transition duration-500 dark:bg-white/20 items-center flex-col flex-nowrap gap-10 h-min justify-center overflow-visible p-px decoration-clone w-fit cursor-pointer",
+          "relative flex rounded-full border content-center bg-neutral-900/20 hover:bg-neutral-900/10 transition duration-500 dark:bg-white/20 items-center flex-col flex-nowrap gap-10 h-min justify-center overflow-visible p-px decoration-clone w-fit cursor-pointer",
           containerClassName
         )}
       >
         <div
           className={cn(
-            "w-auto text-white z-10 bg-black px-5 py-2 font-semibold rounded-[inherit]",
+            "w-auto text-white z-10 bg-neutral-900 px-5 py-2 font-semibold rounded-[inherit]",
             className
           )}
         >
@@ -99,7 +99,7 @@ export function RemoteButton({
           }}
           transition={{ ease: "linear", duration: duration ?? 1 }}
         />
-        <div className="bg-black absolute z-1 flex-none inset-[2px] rounded-[100px]" />
+        <div className="bg-neutral-900 absolute z-1 flex-none inset-[2px] rounded-[100px]" />
       </div>
     </motion.button>
   );
