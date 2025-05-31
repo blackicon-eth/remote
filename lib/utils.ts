@@ -10,11 +10,11 @@ export function cn(...inputs: ClassValue[]) {
  * @param num - The number to format
  * @returns The formatted number with the appropriate suffix
  */
-export function formatNumber(num: number): string {
+export function formatNumber(num: number, decimals: number = 2): string {
   if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
   if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
   if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
-  return num.toFixed(2);
+  return num.toFixed(decimals);
 }
 
 /**

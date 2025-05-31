@@ -29,6 +29,17 @@ import {
 } from "@reown/appkit/react";
 import { useUserBalances } from "../context/user-balances-provider";
 
+const useDebounce = <T,>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
 export const Cart = () => {
   const { userTokens } = useUserBalances();
   const { isConnected } = useAppKitAccount();
@@ -42,20 +53,41 @@ export const Cart = () => {
       selectedToken: PortalsToken | null;
     };
   }>({});
+  const [remainingTokenBalance, setRemainingTokenBalance] = useState<{
+    [userTokenKey: PortalsToken["key"]]: number;
+  }>({});
+
+  const debouncedCartItemStates = useDebounce(cartItemStates, 300);
+
+  // Get the user tokens he has in his wallet
+  const userWalletTokens = userTokens?.tokens;
+
+  // A useEffect to get the remaining amount of a token, given the token key
+  useEffect(() => {
+    const newRemainingTokenBalance: {
+      [userTokenKey: PortalsToken["key"]]: number;
+    } = {};
+    userWalletTokens?.forEach((token) => {
+      const totalAmountUsed = Object.values(debouncedCartItemStates).reduce(
+        (acc, state) => {
+          return token.key === state.selectedToken?.key
+            ? (acc * 10 ** token.decimals +
+                Number(state.amount ?? 0) * 10 ** token.decimals) /
+                10 ** token.decimals
+            : acc;
+        },
+        0
+      );
+      newRemainingTokenBalance[token.key] =
+        (Number(token.balance) * 10 ** token.decimals -
+          totalAmountUsed * 10 ** token.decimals) /
+        10 ** token.decimals;
+    });
+    setRemainingTokenBalance(newRemainingTokenBalance);
+  }, [userWalletTokens, debouncedCartItemStates]);
 
   // Whether the cart is filled with some items or not
   const isCartFilled = useMemo(() => cart.length > 0, [cart]);
-
-  // Get the network id from the selected network id
-  const sanitizedNetworkId = selectedNetworkId?.split(":")[1] ?? "0";
-
-  // Filter user tokens based on the chain of the position
-  const filteredUserTokens = userTokens?.tokens?.filter(
-    (token) =>
-      token.network ===
-      networks.find((network) => network.id === Number(sanitizedNetworkId))
-        ?.name
-  );
 
   const handleCartOpen = () => {
     if (isConnected && isCartFilled) {
@@ -127,7 +159,7 @@ export const Cart = () => {
             <DialogDescription className="hidden" />
           </DialogHeader>
           <AnimatePresence mode="wait">
-            {filteredUserTokens?.length === 0 ? (
+            {userWalletTokens?.length === 0 ? (
               <motion.div
                 key="no-tokens-on-network"
                 initial={{ opacity: 0 }}
@@ -168,7 +200,14 @@ export const Cart = () => {
                             whileHover={{ scale: 1.015 }}
                             whileTap={{ scale: 0.985 }}
                             className="text-xs bg-red-500 rounded-md py-0.5 px-2 hover:text-white transition-all duration-300 cursor-pointer flex justify-center items-center gap-1"
-                            onClick={() => removeFromCart(item)}
+                            onClick={() => {
+                              removeFromCart(item);
+                              setCartItemStates((prev) => {
+                                const newState = { ...prev };
+                                delete newState[item.key];
+                                return newState;
+                              });
+                            }}
                           >
                             <p>Remove</p>
                             <Trash2 className="size-3.5" />
@@ -214,9 +253,9 @@ export const Cart = () => {
                                 setCartItemStates((prev) => ({
                                   ...prev,
                                   [item.key]: {
-                                    ...prev[item.key],
+                                    amount: "",
                                     selectedToken:
-                                      filteredUserTokens?.find(
+                                      userWalletTokens?.find(
                                         (token) => token.key === value
                                       ) ?? null,
                                   },
@@ -227,7 +266,7 @@ export const Cart = () => {
                                 <SelectValue placeholder="Select Token" />
                               </SelectTrigger>
                               <SelectContent>
-                                {filteredUserTokens?.map((token) => (
+                                {userWalletTokens?.map((token) => (
                                   <SelectItem key={token.key} value={token.key}>
                                     <img
                                       src={token.image}
@@ -252,13 +291,17 @@ export const Cart = () => {
                             </p>
                             <div className="flex justify-center items-center gap-1">
                               <p className="text-xs text-neutral-400">
-                                Balance:
+                                Available:
                               </p>
                               <p className="text-xs text-neutral-400">
-                                $
                                 {formatNumber(
-                                  cartItemStates[item.key]?.selectedToken
-                                    ?.balanceUSD ?? 0
+                                  Number(
+                                    remainingTokenBalance[
+                                      cartItemStates[item.key]?.selectedToken
+                                        ?.key ?? ""
+                                    ] ?? 0
+                                  ),
+                                  4
                                 )}
                               </p>
                               <button
@@ -270,19 +313,34 @@ export const Cart = () => {
                                 disabled={
                                   !cartItemStates[item.key]?.selectedToken
                                 }
-                                onClick={() =>
-                                  setCartItemStates((prev) => ({
-                                    ...prev,
-                                    [item.key]: {
-                                      ...prev[item.key],
-                                      amount:
-                                        cartItemStates[
-                                          item.key
-                                        ]?.selectedToken?.balance?.toString() ??
-                                        "0",
-                                    },
-                                  }))
-                                }
+                                onClick={() => {
+                                  const remainingBalance = Number(
+                                    remainingTokenBalance[
+                                      cartItemStates[item.key]?.selectedToken
+                                        ?.key ?? ""
+                                    ] ?? 0
+                                  );
+                                  if (remainingBalance > 0) {
+                                    const decimals =
+                                      cartItemStates[item.key]?.selectedToken
+                                        ?.decimals ?? 0;
+                                    setCartItemStates((prev) => ({
+                                      ...prev,
+                                      [item.key]: {
+                                        ...prev[item.key],
+                                        amount: (
+                                          (Number(
+                                            cartItemStates[item.key]?.amount ??
+                                              0
+                                          ) *
+                                            10 ** decimals +
+                                            remainingBalance * 10 ** decimals) /
+                                          10 ** decimals
+                                        ).toString(),
+                                      },
+                                    }));
+                                  }
+                                }}
                               >
                                 Max
                               </button>
