@@ -1,4 +1,6 @@
 import { SupportedNetworks } from "./enums";
+import { createPublicClient, http, erc20Abi, Chain } from "viem";
+import { base, arbitrum, polygon, flowMainnet, mainnet } from "viem/chains";
 
 // Supported Networks
 export const SUPPORTED_NETWORKS = [
@@ -171,4 +173,70 @@ export const chainIdToNetworkName = (
   return CHAIN_ID_TO_NETWORK[id] || null;
 };
 
+// check token decimals
 
+// Chain configurations for viem
+const CHAIN_CONFIGS: Record<number, Chain> = {
+  8453: base,
+  42161: arbitrum,
+  137: polygon,
+  747: flowMainnet,
+  // Add more chains as needed
+};
+
+// RPC URLs - you might want to use your Alchemy keys here
+const getRpcUrl = (chainId: number): string => {
+  switch (chainId) {
+    case 8453: // Base
+      return base.rpcUrls.default.http[0];
+    case 42161: // Arbitrum
+      return arbitrum.rpcUrls.default.http[0];
+    case 137: // Polygon
+      return polygon.rpcUrls.default.http[0];
+    case 747: // Flow
+      return flowMainnet.rpcUrls.default.http[0];
+    default:
+      throw new Error(`Unsupported chain ID: ${chainId}`);
+  }
+};
+
+export const getTokenDecimals = async (
+  tokenAddress: string,
+  chainId: number | string
+): Promise<number> => {
+  try {
+    const id = typeof chainId === "string" ? parseInt(chainId, 10) : chainId;
+
+    // Get chain config
+    const chain = CHAIN_CONFIGS[id];
+    if (!chain) {
+      throw new Error(`Unsupported chain ID: ${id}`);
+    }
+
+    // Create public client
+    const client = createPublicClient({
+      chain,
+      transport: http(getRpcUrl(id)),
+    });
+    console.log("tokenAddress", tokenAddress);
+    console.log("chainId", chainId);
+    console.log("chain", chain.name);
+
+    // Read decimals from the token contract
+    const decimals = await client.readContract({
+      address: tokenAddress as `0x${string}`,
+      abi: erc20Abi,
+      functionName: "decimals",
+    });
+    console.log("decimals", decimals);
+
+    return decimals;
+  } catch (error) {
+    console.error(
+      `Error getting token decimals for ${tokenAddress} on chain ${chainId}:`,
+      error
+    );
+    // Return default decimals (18) if we can't read from contract
+    return 18;
+  }
+};

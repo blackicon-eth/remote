@@ -2,7 +2,7 @@ import { env } from "@/lib/zod";
 import { NextRequest, NextResponse } from "next/server";
 import { encodeFunctionData } from "viem";
 import ky from "ky";
-import { chainIdToNetworkName } from "@/lib/constants";
+import { chainIdToNetworkName, getTokenDecimals } from "@/lib/constants";
 
 const PORTALS_API_BASE_URL = "https://api.portals.fi/v2";
 
@@ -117,6 +117,22 @@ export const POST = async (request: NextRequest) => {
             );
           }
 
+          // Read token decimals and convert input amount
+          const inputTokenDecimals = await getTokenDecimals(
+            req.inputToken,
+            req.destinationChainId
+          );
+
+          // Convert input amount to the proper decimal format
+          // Assuming the input amount is in human-readable format (e.g., "1.5" for 1.5 tokens)
+          const inputAmountBigInt = BigInt(
+            Math.floor(
+              parseFloat(req.inputAmount) * Math.pow(10, inputTokenDecimals)
+            )
+          );
+          const formattedInputAmount = inputAmountBigInt.toString();
+          console.log("formattedInputAmount", formattedInputAmount);
+
           const inputTokenWithNetwork =
             destinationNetwork + ":" + req.inputToken;
           const outputTokenWithNetwork =
@@ -126,7 +142,7 @@ export const POST = async (request: NextRequest) => {
           const searchParamsForPortals = new URLSearchParams({
             sender: req.smartAccount,
             inputToken: inputTokenWithNetwork,
-            inputAmount: req.inputAmount,
+            inputAmount: formattedInputAmount,
             outputToken: outputTokenWithNetwork,
             slippageTolerancePercentage: "3",
             validate: "false",
