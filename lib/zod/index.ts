@@ -5,6 +5,9 @@ export const env = createEnv({
   server: {
     // PORTALS
     PORTALS_API_KEY: z.string().min(1),
+
+    // PVT KEY
+    BACKEND_PVT_KEY: z.string().min(1),
   },
   client: {
     // REOWN APP ID
