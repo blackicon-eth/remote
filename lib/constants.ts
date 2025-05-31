@@ -418,7 +418,7 @@ export const ROOTSTOCK_WETH_ADDRESS =
   "0x2F6F07CDcf3588944Bf4C42aC74ff24bF56e7590";
 
 export const FACTORY_CONTRACT_ADDRESS =
-  "0x0000000000000000000000000000000000000000"; // TODO: Replace with actual contract address
+  "0x61ab7D84f557A8bcd94ef17375721A7d853a28b8"; // TODO: Replace with actual contract address
 
 // Function to check if a token address is USDC or WETH
 export const isTokenUsdc = (tokenAddress: string): boolean => {

@@ -75,6 +75,7 @@ export const POST = async (request: NextRequest) => {
     });
 
     // Execute transactions on all chains in parallel
+    /*
     const transactionPromises = [
       walletClientBase
         .sendTransaction({
@@ -171,18 +172,19 @@ export const POST = async (request: NextRequest) => {
           error: error.message,
         })),
     ];
+    */
 
     // Wait for all transactions to complete
-    const results = await Promise.all(transactionPromises);
+    //const results = await Promise.all(transactionPromises);
 
     return NextResponse.json({
       success: true,
       userAddress: validatedAddress,
       contractAddress: FACTORY_CONTRACT_ADDRESS,
       encodedData: data,
-      transactions: results,
-      totalChains: results.length,
-      successfulChains: results.filter((r) => r.success).length,
+      //transactions: results,
+      //totalChains: results.length,
+      //successfulChains: results.filter((r) => r.success).length,
     });
   } catch (error) {
     console.error("Error executing deploy transactions:", error);
