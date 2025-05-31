@@ -276,13 +276,13 @@ export const POST = async (request: NextRequest) => {
                 console.log("stargateAddress", stargateAddress);
 
                 const result = await client.readContract({
-                  address: "0x3fc132B790D15Ff5C03CB076Af4d4e112b302C55", //req.smartAccount as `0x${string}`, TODO
+                  address: req.smartAccount as `0x${string}`, //req.smartAccount as `0x${string}`
                   abi: REMOTE_ACCOUNT_ABI,
                   functionName: "prepare",
                   args: [
                     stargateAddress as `0x${string}`, // _stargate address
                     chainIdToEid(req.destinationChainId)!, // _dstEid from constants
-                    BigInt(sourceInputAmountForMessagingFee), // _amount is 70% of original input amount //TODO
+                    BigInt(sourceInputAmountForMessagingFee), // _amount is 70% of original input amount 
                     req.smartAccount as `0x${string}`, // _composer as smart account
                     composeMsg as `0x${string}`, // _composeMsg
                     BigInt(2000000), // 2m gas limit
