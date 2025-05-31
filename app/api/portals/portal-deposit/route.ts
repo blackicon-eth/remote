@@ -89,6 +89,10 @@ interface PortalResult {
     sendParam: any;
     messagingFee: any;
   } | null>;
+  aggregatedMessagingFee: {
+    nativeFee: string;
+    lzTokenFee: string;
+  };
   transactionCalldataToExecute: string; // Single field, not array
   isBatch: boolean;
   total: number;
@@ -425,9 +429,31 @@ export const POST = async (request: NextRequest) => {
     }
 
     // Transform to single result with arrays
+    const successfulPrepareResults = processedResults
+      .map((r) => r.prepareResult)
+      .filter((pr) => pr !== null);
+
+    // Aggregate messaging fees from all successful results
+    const aggregatedMessagingFee = successfulPrepareResults.reduce(
+      (acc, prepareResult) => {
+        if (prepareResult && prepareResult.messagingFee) {
+          acc.nativeFee = (
+            BigInt(acc.nativeFee) + BigInt(prepareResult.messagingFee.nativeFee)
+          ).toString();
+          acc.lzTokenFee = (
+            BigInt(acc.lzTokenFee) +
+            BigInt(prepareResult.messagingFee.lzTokenFee)
+          ).toString();
+        }
+        return acc;
+      },
+      { nativeFee: "0", lzTokenFee: "0" }
+    );
+
     const finalResult: PortalResult = {
       composeMsg: processedResults.map((r) => r.composeMsg),
       prepareResult: processedResults.map((r) => r.prepareResult || null),
+      aggregatedMessagingFee,
       transactionCalldataToExecute,
       isBatch: requests.length > 1,
       total: processedResults.length,
