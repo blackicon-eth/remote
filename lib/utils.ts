@@ -1,5 +1,11 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { PortalsToken } from "./portals/types";
+import { Address, createPublicClient, erc20Abi, getAddress, http } from "viem";
+import { networks } from "./appkit";
+import { flare } from "viem/chains";
+import { AlchemyRpcBaseUrls } from "./enums";
+import { env } from "./zod";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -46,4 +52,96 @@ export function platformNameFormatter(platform: string) {
  */
 export const truncateAddress = (address: string, size: number = 4) => {
   return `${address.slice(0, size + 2)}...${address.slice(-size)}`;
+};
+
+/**
+ * Sanitizes the network id
+ * @param networkId - The network id
+ * @returns The sanitized network id
+ */
+export const sanitizeNetworkId = (networkId: string | undefined) => {
+  return networkId?.split(":")[1] ?? "0";
+};
+
+/**
+ * Generates the approve steps for the tokens in the cart
+ * @param cartItemStates - The cart item states
+ * @param networkId - The network id
+ * @param userAddress - The user address
+ * @param smartWalletAddress - The smart wallet address
+ */
+export const generateApproveSteps = async (
+  cartItemStates: {
+    [key: string]: {
+      amount: string;
+      selectedToken: PortalsToken | null;
+    };
+  },
+  networkId: string,
+  userAddress: Address,
+  smartWalletAddress: Address
+) => {
+  const connectedChain = networks.find(
+    (network) => network.id === Number(networkId)
+  );
+
+  if (!connectedChain) {
+    throw new Error("Connected chain not found");
+  }
+
+  const rpcUrl =
+    connectedChain === flare
+      ? "https://flare.rpc.thirdweb.com"
+      : `${
+          AlchemyRpcBaseUrls[
+            connectedChain.name.toLowerCase() as keyof typeof AlchemyRpcBaseUrls
+          ]
+        }/${env.NEXT_PUBLIC_ALCHEMY_API_KEY}`;
+
+  // Create the public client
+  const publicClient = createPublicClient({
+    chain: connectedChain,
+    transport: http(rpcUrl),
+  });
+
+  let approveSteps: {
+    title: string;
+    description: string;
+    status: "pending" | "success" | "error";
+    token: PortalsToken | null;
+  }[] = [];
+
+  // Create a list of source tokens
+  let sourceTokens: string[] = [];
+  for (const item of Object.values(cartItemStates)) {
+    if (
+      item.selectedToken &&
+      !sourceTokens.includes(item.selectedToken.address)
+    ) {
+      sourceTokens.push(item.selectedToken.address);
+    }
+  }
+
+  // Check for each token if the user has enough allowance
+  for (const token of sourceTokens) {
+    const allowance = Number(
+      await publicClient.readContract({
+        address: getAddress(token.toLowerCase() as Address),
+        abi: erc20Abi,
+        functionName: "allowance",
+        args: [userAddress, smartWalletAddress],
+      })
+    );
+
+    if (allowance === 0) {
+      approveSteps.push({
+        title: "Approve",
+        description: "Approve the smart wallet to spend the tokens",
+        status: "pending",
+        token: cartItemStates[token].selectedToken,
+      });
+    }
+  }
+
+  // Check if the user has enough balance for the tokens
 };

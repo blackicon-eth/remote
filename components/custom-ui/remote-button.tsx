@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 type Direction = "TOP" | "LEFT" | "BOTTOM" | "RIGHT";
 
@@ -16,6 +17,7 @@ interface RemoteButtonProps {
   hoverZoom?: number;
   tapZoom?: number;
   disabled?: boolean;
+  isLoading?: boolean;
 }
 
 export function RemoteButton({
@@ -28,6 +30,7 @@ export function RemoteButton({
   hoverZoom = 1.02,
   tapZoom = 0.98,
   disabled = false,
+  isLoading = false,
 }: RemoteButtonProps) {
   const [hovered, setHovered] = useState<boolean>(false);
   const [direction, setDirection] = useState<Direction>("TOP");
@@ -65,10 +68,10 @@ export function RemoteButton({
   return (
     <motion.button
       disabled={disabled}
-      whileHover={{ scale: disabled ? 1 : hoverZoom }}
-      whileTap={{ scale: disabled ? 1 : tapZoom }}
+      whileHover={{ scale: disabled || isLoading ? 1 : hoverZoom }}
+      whileTap={{ scale: disabled || isLoading ? 1 : tapZoom }}
       animate={{
-        opacity: disabled ? 0.5 : 1,
+        opacity: disabled || isLoading ? 0.5 : 1,
       }}
       onClick={onClick}
       className="cursor-pointer z-10"
@@ -80,7 +83,7 @@ export function RemoteButton({
         onMouseLeave={() => setHovered(false)}
         className={cn(
           "relative flex rounded-full border content-center bg-neutral-900/20 hover:bg-neutral-900/10 transition duration-500 dark:bg-white/20 items-center flex-col flex-nowrap gap-10 h-min justify-center overflow-visible p-px decoration-clone w-fit cursor-pointer",
-          disabled && "cursor-default",
+          (disabled || isLoading) && "cursor-default",
           containerClassName
         )}
       >
@@ -90,7 +93,7 @@ export function RemoteButton({
             className
           )}
         >
-          {children}
+          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : children}
         </div>
         <motion.div
           className={cn(

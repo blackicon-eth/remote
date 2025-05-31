@@ -13,6 +13,7 @@ import ky from "ky";
 import { useAppKitAccount, useAppKitState } from "@reown/appkit/react";
 import { UserTokens } from "@/lib/types";
 import { networks } from "@/lib/appkit";
+import { sanitizeNetworkId } from "@/lib/utils";
 
 interface UserBalancesContextType {
   userTokens: UserTokens | undefined;
@@ -30,7 +31,7 @@ export function UserBalancesProvider({ children }: { children: ReactNode }) {
   const { address } = useAppKitAccount();
   const { selectedNetworkId } = useAppKitState();
 
-  const sanitizedNetworkId = selectedNetworkId?.split(":")[1] ?? "0";
+  const sanitizedNetworkId = sanitizeNetworkId(selectedNetworkId);
 
   const selectedNetworkName = networks.find(
     (network) => network.id === Number(sanitizedNetworkId)

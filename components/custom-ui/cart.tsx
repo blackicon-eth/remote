@@ -17,7 +17,11 @@ import {
   SelectValue,
 } from "../shadcn-ui/select";
 import { Trash2 } from "lucide-react";
-import { formatNumber } from "@/lib/utils";
+import {
+  formatNumber,
+  generateApproveSteps,
+  sanitizeNetworkId,
+} from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 import { PortalsToken } from "@/lib/portals/types";
@@ -28,6 +32,14 @@ import {
 } from "@reown/appkit/react";
 import { useUserBalances } from "../context/user-balances-provider";
 import { RemoteButton } from "./remote-button";
+import { Address } from "viem";
+
+enum CartStatus {
+  COMPILING = "compiling",
+  APPROVING = "approving",
+  TRANSACTIONS = "transactions",
+  FINISHED = "finished",
+}
 
 const useDebounce = <T,>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -45,6 +57,8 @@ export const Cart = () => {
   const { isConnected } = useAppKitAccount();
   const { selectedNetworkId } = useAppKitState();
   const { open } = useAppKit();
+  const { address: userAddress } = useAppKitAccount();
+  const { address: smartWalletAddress } = useAppKitSmartWallet();
   const { cart, removeFromCart } = useCart();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartItemStates, setCartItemStates] = useState<{
@@ -56,6 +70,27 @@ export const Cart = () => {
   const [remainingTokenBalance, setRemainingTokenBalance] = useState<{
     [userTokenKey: PortalsToken["key"]]: number;
   }>({});
+  const [cartStatus, setCartStatus] = useState<CartStatus>(
+    CartStatus.COMPILING
+  );
+
+  const buttonObject = useMemo(() => {
+    if (cartStatus === CartStatus.COMPILING) {
+      if (!userAddress) return;
+      return {
+        text: "Compiling",
+        onClick: () => {
+          const approveSteps = generateApproveSteps(
+            cartItemStates,
+            sanitizeNetworkId(selectedNetworkId),
+            userAddress as Address,
+            smartWalletAddress as Address
+          );
+          setCartStatus(CartStatus.TRANSACTIONS);
+        },
+      };
+    }
+  }, [cartStatus]);
 
   const debouncedCartItemStates = useDebounce(cartItemStates, 300);
 
@@ -187,8 +222,8 @@ export const Cart = () => {
                       className="flex justify-center items-center w-full h-full"
                     >
                       <div className="flex flex-col justify-center items-start w-full gap-2">
-                        <div className="flex justify-between items-center w-full">
-                          <div className="flex justify-center items-center gap-1.5 text-sm text-neutral-400 px-1">
+                        <div className="flex justify-between items-center w-full px-1">
+                          <div className="flex justify-center items-center gap-1.5 text-sm text-neutral-400">
                             <img
                               src={item.images?.[0] ?? item.image}
                               alt={item.name}
@@ -352,8 +387,8 @@ export const Cart = () => {
                   ))}
                 </AnimatePresence>
                 <RemoteButton
-                  className="w-full rounded-lg"
-                  containerClassName="w-full rounded-lg"
+                  className="flex justify-center items-center w-full rounded-lg h-[43px]"
+                  containerClassName="w-full rounded-lg h-[43px]"
                   hoverZoom={1.005}
                   tapZoom={0.995}
                   disabled={
@@ -363,6 +398,7 @@ export const Cart = () => {
                         state.amount === "" || Number(state.amount) <= 0
                     )
                   }
+                  isLoading={false}
                 >
                   Deposit
                 </RemoteButton>
