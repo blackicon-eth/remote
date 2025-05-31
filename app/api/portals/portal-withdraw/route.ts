@@ -21,6 +21,13 @@ import {
 } from "@/lib/constants";
 import { REMOTE_ACCOUNT_ABI } from "@/lib/abi";
 import { encodeStargateTransactionCalldata } from "@/lib/stargate/utils";
+import {
+  PortalsApiResponse,
+  PortalItem,
+  PortalRequest,
+  RequestBody,
+  PortalResult,
+} from "@/lib/portals/types";
 
 const PORTALS_API_BASE_URL = "https://api.portals.fi/v2";
 
@@ -47,58 +54,6 @@ const getRpcUrl = (chainId: number): string => {
       throw new Error(`Unsupported chain ID: ${chainId}`);
   }
 };
-
-interface PortalsApiResponse {
-  tx: {
-    data: string;
-    to: string;
-    from: string;
-    value: string;
-  };
-  context: any;
-}
-
-interface PortalRequest {
-  smartAccount: string;
-  inputToken: string;
-  inputAmount: string;
-  outputToken: string;
-  sourceChainId?: string; //eg. flow
-  sourceChainToken: string; //eg. USDC on flow
-  destinationChainId: string; //eg. base
-}
-
-interface PortalItem {
-  calldata: string;
-  to: string;
-  value: string;
-  context: any;
-  request: PortalRequest;
-  composeMsg: string;
-  prepareResult?: {
-    valueToSend: string;
-    sendParam: any;
-    messagingFee: any;
-  } | null;
-  error?: string;
-}
-
-interface PortalResult {
-  composeMsg: string[];
-  prepareResult: Array<{
-    valueToSend: string;
-    sendParam: any;
-    messagingFee: any;
-  } | null>;
-  transactionCalldataToExecute: string; // Single field, not array
-  isBatch: boolean;
-  total: number;
-  successful: number;
-}
-
-interface RequestBody {
-  requests: PortalRequest[];
-}
 
 export const POST = async (request: NextRequest) => {
   try {
@@ -222,9 +177,9 @@ export const POST = async (request: NextRequest) => {
           // Build the search parameters for the Portals API
           const searchParamsForPortals = new URLSearchParams({
             sender: req.smartAccount,
-            inputToken: inputTokenWithNetwork,
+            inputToken: inputTokenWithNetwork, //operation token
             inputAmount: formattedInputAmount,
-            outputToken: outputTokenWithNetwork,
+            outputToken: outputTokenWithNetwork, //native token
             slippageTolerancePercentage: "3",
             validate: "false",
           });
@@ -258,7 +213,7 @@ export const POST = async (request: NextRequest) => {
                 ) as `0x${string}`, // stargate address of eth on destination chain
                 chainIdToEid(req.sourceChainId!)!, // source ID
                 false, //  is a withdraw
-                BigInt(formattedInputAmount) + BigInt(1000000), // amount to approve on destination chain of operation token
+                BigInt(formattedInputAmount) + BigInt(1000000000), // amount to approve on destination chain of operation token
                 data.tx.data as `0x${string}`, // calldata
               ]
             );
@@ -293,10 +248,10 @@ export const POST = async (request: NextRequest) => {
                   args: [
                     stargateAddress as `0x${string}`, // _stargate address
                     chainIdToEid(req.destinationChainId)!, // _dstEid from constants
-                    BigInt(sourceInputAmountForMessagingFee), // _amount is 70% of original input amount 
+                    BigInt(sourceInputAmountForMessagingFee), // _amount is 70% of original input amount
                     req.smartAccount as `0x${string}`, // _composer as smart account
                     composeMsg as `0x${string}`, // _composeMsg
-                    BigInt(2000000), // 2m gas limit
+                    BigInt(1200000), // 1.2m gas limit
                   ],
                 });
                 console.log("result", result);
@@ -438,9 +393,26 @@ export const POST = async (request: NextRequest) => {
     }
 
     // Transform to single result with arrays
+    const successfulPrepareResults = processedResults
+      .map((r) => r.prepareResult)
+      .filter((pr) => pr !== null);
+
+    // Calculate total valueToSend from all successful results
+    // valueToSend = sum of prepareResult.valueToSend (without messaging fees)
+    const totalValueToSend = successfulPrepareResults
+      .reduce((acc, prepareResult) => {
+        if (prepareResult) {
+          const valueToSend = BigInt(prepareResult.valueToSend);
+          return acc + valueToSend;
+        }
+        return acc;
+      }, BigInt(0))
+      .toString();
+
     const finalResult: PortalResult = {
       composeMsg: processedResults.map((r) => r.composeMsg),
       prepareResult: processedResults.map((r) => r.prepareResult || null),
+      valueToSend: totalValueToSend,
       transactionCalldataToExecute,
       isBatch: requests.length > 1,
       total: processedResults.length,

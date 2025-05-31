@@ -91,10 +91,7 @@ export interface PortalResult {
     sendParam: any;
     messagingFee: any;
   } | null>;
-  aggregatedMessagingFee: {
-    nativeFee: string;
-    lzTokenFee: string;
-  };
+  valueToSend: string;
   transactionCalldataToExecute: string; // Single field, not array
   isBatch: boolean;
   total: number;

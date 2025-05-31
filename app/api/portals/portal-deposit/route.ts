@@ -227,10 +227,10 @@ export const POST = async (request: NextRequest) => {
                   args: [
                     stargateAddress as `0x${string}`, // _stargate address
                     chainIdToEid(req.destinationChainId)!, // _dstEid from constants
-                    sourceInputAmountBigInt, // _amount is 70% of original input amount
+                    sourceInputAmountBigInt,
                     req.smartAccount as `0x${string}`, // _composer as smart account
                     composeMsg as `0x${string}`, // _composeMsg
-                    BigInt(2000000), // 2m gas limit
+                    BigInt(1200000), // 1.2m gas limit
                   ],
                 });
                 console.log("result", result);
@@ -376,27 +376,22 @@ export const POST = async (request: NextRequest) => {
       .map((r) => r.prepareResult)
       .filter((pr) => pr !== null);
 
-    // Aggregate messaging fees from all successful results
-    const aggregatedMessagingFee = successfulPrepareResults.reduce(
-      (acc, prepareResult) => {
-        if (prepareResult && prepareResult.messagingFee) {
-          acc.nativeFee = (
-            BigInt(acc.nativeFee) + BigInt(prepareResult.messagingFee.nativeFee)
-          ).toString();
-          acc.lzTokenFee = (
-            BigInt(acc.lzTokenFee) +
-            BigInt(prepareResult.messagingFee.lzTokenFee)
-          ).toString();
+    // Calculate total valueToSend from all successful results
+    // valueToSend = sum of prepareResult.valueToSend (without messaging fees)
+    const totalValueToSend = successfulPrepareResults
+      .reduce((acc, prepareResult) => {
+        if (prepareResult) {
+          const valueToSend = BigInt(prepareResult.valueToSend);
+          return acc + valueToSend;
         }
         return acc;
-      },
-      { nativeFee: "0", lzTokenFee: "0" }
-    );
+      }, BigInt(0))
+      .toString();
 
     const finalResult: PortalResult = {
       composeMsg: processedResults.map((r) => r.composeMsg),
       prepareResult: processedResults.map((r) => r.prepareResult || null),
-      aggregatedMessagingFee,
+      valueToSend: totalValueToSend,
       transactionCalldataToExecute,
       isBatch: requests.length > 1,
       total: processedResults.length,
