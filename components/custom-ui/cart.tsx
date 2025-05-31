@@ -21,13 +21,13 @@ import { formatNumber } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 import { PortalsToken } from "@/lib/portals/types";
-import { networks } from "@/lib/appkit";
 import {
   useAppKit,
   useAppKitAccount,
   useAppKitState,
 } from "@reown/appkit/react";
 import { useUserBalances } from "../context/user-balances-provider";
+import { RemoteButton } from "./remote-button";
 
 const useDebounce = <T,>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -351,6 +351,21 @@ export const Cart = () => {
                     </motion.div>
                   ))}
                 </AnimatePresence>
+                <RemoteButton
+                  className="w-full rounded-lg"
+                  containerClassName="w-full rounded-lg"
+                  hoverZoom={1.005}
+                  tapZoom={0.995}
+                  disabled={
+                    Object.keys(cartItemStates).length !== cart.length ||
+                    Object.values(cartItemStates).some(
+                      (state) =>
+                        state.amount === "" || Number(state.amount) <= 0
+                    )
+                  }
+                >
+                  Deposit
+                </RemoteButton>
               </motion.div>
             )}
           </AnimatePresence>
