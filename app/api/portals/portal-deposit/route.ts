@@ -242,7 +242,7 @@ export const POST = async (request: NextRequest) => {
               [
                 "0x0000000000000000000000000000000000000000", // operation token
                 "0x0000000000000000000000000000000000000000", // stargate address
-                BASE_CHAIN_EID, // dest ID
+                chainIdToEid(req.destinationChainId)!, // dest ID
                 true, //  isDeposit
                 BigInt(0), // amount approve
                 data.tx.data as `0x${string}`, // calldata

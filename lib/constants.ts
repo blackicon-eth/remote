@@ -205,6 +205,15 @@ export const getTokenDecimals = async (
   chainId: number | string
 ): Promise<number> => {
   try {
+    // Check if token is zero address (native token), return 18 decimals
+    if (
+      tokenAddress === "0x0000000000000000000000000000000000000000" ||
+      tokenAddress.toLowerCase() ===
+        "0x0000000000000000000000000000000000000000"
+    ) {
+      return 18;
+    }
+
     const id = typeof chainId === "string" ? parseInt(chainId, 10) : chainId;
 
     // Get chain config
@@ -408,5 +417,39 @@ export const ROOTSTOCK_USDC_ADDRESS =
 export const ROOTSTOCK_WETH_ADDRESS =
   "0x2F6F07CDcf3588944Bf4C42aC74ff24bF56e7590";
 
+export const FACTORY_CONTRACT_ADDRESS =
+  "0x0000000000000000000000000000000000000000"; // TODO: Replace with actual contract address
 
-export const FACTORY_CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000"; // TODO: Replace with actual contract address
+// Function to check if a token address is USDC or WETH
+export const isTokenUsdc = (tokenAddress: string): boolean => {
+  try {
+    // Normalize the input address
+    const normalizedAddress = getAddress(tokenAddress);
+
+    // Define all known USDC addresses across chains
+    const USDC_ADDRESSES = [
+      // Base USDC
+      "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      // Arbitrum USDC
+      "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      // Flow USDC
+      FLOW_USDC_ADDRESS,
+      // Flare USDC
+      FLARE_USDC_ADDRESS,
+      // Rootstock USDC
+      ROOTSTOCK_USDC_ADDRESS,
+    ];
+
+    // Check if the normalized address matches any USDC address
+    return USDC_ADDRESSES.some((usdcAddress) => {
+      try {
+        return normalizedAddress === getAddress(usdcAddress);
+      } catch {
+        return false;
+      }
+    });
+  } catch (error) {
+    console.error("Invalid address format:", tokenAddress, error);
+    return false;
+  }
+};
