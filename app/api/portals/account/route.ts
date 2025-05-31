@@ -15,6 +15,7 @@ import { Address, createPublicClient, http, getAddress } from "viem";
 import { AlchemyRpcBaseUrls } from "@/lib/enums";
 import { erc20Abi } from "viem";
 import { AlchemyTokenPriceResponse } from "@/lib/alchemy/types";
+import { networks } from "@/lib/appkit";
 
 export const GET = async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
@@ -53,8 +54,16 @@ export const GET = async (request: NextRequest) => {
         }
       : null;
 
-  const connectedChain =
-    networkId === "747" ? flowMainnet : networkId === "30" ? rootstock : flare;
+  const connectedChain = networks.find(
+    (network) => network.id === Number(networkId)
+  );
+
+  if (!connectedChain) {
+    return NextResponse.json(
+      { error: "NetworkId is not supported" },
+      { status: 400 }
+    );
+  }
 
   const rpcUrl =
     connectedChain === flare

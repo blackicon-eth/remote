@@ -42,7 +42,6 @@ export const MyPositionsContainer = ({
 
     // Apply sorting if a column is selected
     if (filtered && sortColumn && sortDirection) {
-      console.log("Sorting triggered:", { sortColumn, sortDirection });
       filtered = [...filtered].sort((a, b) => {
         let aValue: number;
         let bValue: number;
