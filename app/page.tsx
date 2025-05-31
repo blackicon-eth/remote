@@ -5,14 +5,19 @@ import { ChainButton } from "@/components/custom-ui/chain-button";
 import { FullPageError } from "@/components/custom-ui/fullpage-error";
 import { FullPageLoading } from "@/components/custom-ui/fullpage-loading";
 import { ModeButton } from "@/components/custom-ui/mode-button";
-import { ListModes, SupportedNetworks } from "@/lib/enums";
+import {
+  ListModes,
+  SortingDirections,
+  SortingColumns,
+  SupportedNetworks,
+} from "@/lib/enums";
 import { ChainColors, ChainImages } from "@/lib/constants";
 import { AnimatePresence, motion } from "motion/react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { PlaceholdersAndVanishInput } from "@/components/aceternity-ui/placeholder-vanish-input";
-import { OpportunityTableRow } from "@/components/custom-ui/opportunity-table-row";
 import { TableHeaderButton } from "@/components/custom-ui/table-header-button";
-import { useUserBalances } from "@/components/context/user-balances-provider";
+import { MyPositionsContainer } from "@/components/custom-ui/my-positions-container";
+import { AllOpportunitiesContainer } from "@/components/custom-ui/all-opportunities-container";
 
 export default function Home() {
   const [selectedChains, setSelectedChains] = useState<SupportedNetworks[]>([
@@ -25,27 +30,17 @@ export default function Home() {
   );
   const [searchInput, setSearchInput] = useState<string>("");
   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
-  const [sortColumn, setSortColumn] = useState<"apy" | "liquidity" | null>(
-    null
-  );
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(
+  const [sortColumn, setSortColumn] = useState<SortingColumns | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortingDirections | null>(
     null
   );
 
   const {
-    opportunities,
     isLoadingOpportunities,
     isErrorOpportunities,
     refetchOpportunities,
     isRefetchingOpportunities,
   } = useOpportunities();
-
-  const {
-    userTokens,
-    isLoadingUserTokens,
-    isErrorUserTokens,
-    isRefetchingUserTokens,
-  } = useUserBalances();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -55,61 +50,18 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const filteredOpportunities = useMemo(() => {
-    let filtered = opportunities?.filter(
-      (opportunity) =>
-        (opportunity.name
-          .toLowerCase()
-          .includes(debouncedSearch.toLowerCase()) ||
-          opportunity.platform
-            .toLowerCase()
-            .includes(debouncedSearch.toLowerCase())) &&
-        selectedChains.includes(opportunity.network as SupportedNetworks)
-    );
-
-    // Apply sorting if a column is selected
-    if (filtered && sortColumn && sortDirection) {
-      filtered = [...filtered].sort((a, b) => {
-        let aValue: number;
-        let bValue: number;
-
-        if (sortColumn === "apy") {
-          aValue = Number.parseFloat(a.metrics.apy);
-          bValue = Number.parseFloat(b.metrics.apy);
-        } else {
-          aValue = a.liquidity;
-          bValue = b.liquidity;
-        }
-
-        if (sortDirection === "desc") {
-          return bValue - aValue;
-        } else {
-          return aValue - bValue;
-        }
-      });
-    }
-
-    return filtered;
-  }, [
-    opportunities,
-    debouncedSearch,
-    selectedChains,
-    sortColumn,
-    sortDirection,
-  ]);
-
   const handleSort = useCallback(
-    (column: "apy" | "liquidity") => {
+    (column: SortingColumns) => {
       if (sortColumn === column) {
-        if (sortDirection === "desc") {
-          setSortDirection("asc");
-        } else if (sortDirection === "asc") {
+        if (sortDirection === SortingDirections.DESC) {
+          setSortDirection(SortingDirections.ASC);
+        } else if (sortDirection === SortingDirections.ASC) {
           setSortColumn(null);
           setSortDirection(null);
         }
       } else {
         setSortColumn(column);
-        setSortDirection("desc");
+        setSortDirection(SortingDirections.DESC);
       }
     },
     [sortColumn, sortDirection]
@@ -196,7 +148,7 @@ export default function Home() {
                     text="Deposited"
                     sortColumn={sortColumn}
                     sortDirection={sortDirection}
-                    column="apy"
+                    column={SortingColumns.DEPOSITED}
                     onSort={handleSort}
                     sortable={false}
                   />
@@ -204,14 +156,14 @@ export default function Home() {
                     text="Current APY"
                     sortColumn={sortColumn}
                     sortDirection={sortDirection}
-                    column="apy"
+                    column={SortingColumns.APY}
                     onSort={handleSort}
                   />
                   <TableHeaderButton
                     text="Liquidity"
                     sortColumn={sortColumn}
                     sortDirection={sortDirection}
-                    column="liquidity"
+                    column={SortingColumns.LIQUIDITY}
                     onSort={handleSort}
                   />
                 </div>
@@ -220,37 +172,26 @@ export default function Home() {
               {/* Table body */}
               <div className="flex flex-col rounded-b-lg bg-neutral-800/50 h-[460px] overflow-y-auto w-full [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-neutral-600 [&::-webkit-scrollbar-thumb]:rounded-full">
                 <AnimatePresence mode="wait">
-                  {filteredOpportunities?.length === 0 ? (
-                    <motion.div
-                      key="no-results"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="flex justify-center items-center w-full h-full"
-                    >
-                      <div className="text-white text-sm">
-                        No results found :(
-                      </div>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="opportunities"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="flex flex-col justify-start items-start w-full h-full"
-                    >
-                      <AnimatePresence>
-                        {filteredOpportunities?.map((opportunity, index) => (
-                          <OpportunityTableRow
-                            key={opportunity.key}
-                            opportunity={opportunity}
-                            index={index}
-                            isLast={index === filteredOpportunities.length - 1}
-                          />
-                        ))}
-                      </AnimatePresence>
-                    </motion.div>
+                  {/* My Positions */}
+                  {selectedMode === ListModes.MY_POSITIONS && (
+                    <MyPositionsContainer
+                      key="my-positions"
+                      debouncedSearch={debouncedSearch}
+                      selectedChains={selectedChains}
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                    />
+                  )}
+
+                  {/* All Opportunities */}
+                  {selectedMode === ListModes.ALL_POSITIONS && (
+                    <AllOpportunitiesContainer
+                      key="all-opportunities"
+                      debouncedSearch={debouncedSearch}
+                      selectedChains={selectedChains}
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                    />
                   )}
                 </AnimatePresence>
               </div>
