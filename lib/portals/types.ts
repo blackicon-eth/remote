@@ -44,3 +44,59 @@ export type PortalsToken = {
 export type UserBalances = {
   balances: PortalsToken[];
 };
+
+export interface PortalsApiResponse {
+  tx: {
+    data: string;
+    to: string;
+    from: string;
+    value: string;
+  };
+  context: any;
+}
+
+export interface PortalRequest {
+  smartAccount: string;
+  inputToken: string;
+  inputAmount: string;
+  outputToken: string;
+  sourceChainId?: string; //eg. flow
+  sourceChainToken: string; //eg. USDC on flow
+  destinationChainId: string; //eg. base
+}
+
+export interface PortalItem {
+  calldata: string;
+  to: string;
+  value: string;
+  context: any;
+  request: PortalRequest;
+  composeMsg: string;
+  prepareResult?: {
+    valueToSend: string;
+    sendParam: any;
+    messagingFee: any;
+  } | null;
+  error?: string;
+}
+
+export interface RequestBody {
+  requests: PortalRequest[];
+}
+
+export interface PortalResult {
+  composeMsg: string[];
+  prepareResult: Array<{
+    valueToSend: string;
+    sendParam: any;
+    messagingFee: any;
+  } | null>;
+  aggregatedMessagingFee: {
+    nativeFee: string;
+    lzTokenFee: string;
+  };
+  transactionCalldataToExecute: string; // Single field, not array
+  isBatch: boolean;
+  total: number;
+  successful: number;
+}

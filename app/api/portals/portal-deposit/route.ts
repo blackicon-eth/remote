@@ -1,25 +1,24 @@
 import { env } from "@/lib/zod";
 import { NextRequest, NextResponse } from "next/server";
-import {
-  encodeFunctionData,
-  encodeAbiParameters,
-  createPublicClient,
-  http,
-  Chain,
-} from "viem";
+import { encodeAbiParameters, createPublicClient, http, Chain } from "viem";
 import { base, arbitrum, polygon, flowMainnet } from "viem/chains";
 import ky from "ky";
 import {
   chainIdToNetworkName,
   getTokenDecimals,
-  FLOW_STARGATE_OFT_ETH,
-  BASE_CHAIN_EID,
   chainIdToEid,
   getStargateAddress,
   EMPTY_ADDRESS,
 } from "@/lib/constants";
 import { REMOTE_ACCOUNT_ABI } from "@/lib/abi";
 import { encodeStargateTransactionCalldata } from "@/lib/stargate/utils";
+import {
+  PortalsApiResponse,
+  PortalItem,
+  PortalRequest,
+  RequestBody,
+  PortalResult,
+} from "@/lib/portals/types";
 
 const PORTALS_API_BASE_URL = "https://api.portals.fi/v2";
 
@@ -46,62 +45,6 @@ const getRpcUrl = (chainId: number): string => {
       throw new Error(`Unsupported chain ID: ${chainId}`);
   }
 };
-
-interface PortalsApiResponse {
-  tx: {
-    data: string;
-    to: string;
-    from: string;
-    value: string;
-  };
-  context: any;
-}
-
-interface PortalRequest {
-  smartAccount: string;
-  inputToken: string;
-  inputAmount: string;
-  outputToken: string;
-  sourceChainId?: string; //eg. flow
-  sourceChainToken: string; //eg. USDC on flow
-  destinationChainId: string; //eg. base
-}
-
-interface PortalItem {
-  calldata: string;
-  to: string;
-  value: string;
-  context: any;
-  request: PortalRequest;
-  composeMsg: string;
-  prepareResult?: {
-    valueToSend: string;
-    sendParam: any;
-    messagingFee: any;
-  } | null;
-  error?: string;
-}
-
-interface PortalResult {
-  composeMsg: string[];
-  prepareResult: Array<{
-    valueToSend: string;
-    sendParam: any;
-    messagingFee: any;
-  } | null>;
-  aggregatedMessagingFee: {
-    nativeFee: string;
-    lzTokenFee: string;
-  };
-  transactionCalldataToExecute: string; // Single field, not array
-  isBatch: boolean;
-  total: number;
-  successful: number;
-}
-
-interface RequestBody {
-  requests: PortalRequest[];
-}
 
 export const POST = async (request: NextRequest) => {
   try {

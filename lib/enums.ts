@@ -5,6 +5,13 @@ export enum SupportedNetworks {
   POLYGON = "polygon",
 }
 
+// Chain IDs
+export enum ChainIds {
+  "base" = 8453,
+  "arbitrum" = 42161,
+  "polygon" = 137,
+}
+
 // A list of modes for the list of positions
 export enum ListModes {
   MY_POSITIONS = "my-positions",

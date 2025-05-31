@@ -1,11 +1,19 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { PortalsToken } from "./portals/types";
+import {
+  PortalRequest,
+  PortalResult,
+  PortalsToken,
+  RequestBody,
+} from "./portals/types";
 import { Address, createPublicClient, erc20Abi, getAddress, http } from "viem";
 import { networks } from "./appkit";
 import { flare } from "viem/chains";
-import { AlchemyRpcBaseUrls } from "./enums";
+import { AlchemyRpcBaseUrls, ChainIds } from "./enums";
 import { env } from "./zod";
+import ky from "ky";
+import { CartItemStates } from "./types";
+import { getEquivalentTokenAddress } from "./constants";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -68,18 +76,13 @@ export const sanitizeNetworkId = (networkId: string | undefined) => {
  * @param cartItemStates - The cart item states
  * @param networkId - The network id
  * @param userAddress - The user address
- * @param smartWalletAddress - The smart wallet address
+ * @param smartAccountAddress - The smart wallet address
  */
 export const generateApproveSteps = async (
-  cartItemStates: {
-    [key: string]: {
-      amount: string;
-      selectedToken: PortalsToken | null;
-    };
-  },
+  cartItemStates: CartItemStates,
   networkId: string,
   userAddress: Address,
-  smartWalletAddress: Address
+  smartAccountAddress: Address
 ) => {
   const connectedChain = networks.find(
     (network) => network.id === Number(networkId)
@@ -129,7 +132,7 @@ export const generateApproveSteps = async (
         address: getAddress(token.toLowerCase() as Address),
         abi: erc20Abi,
         functionName: "allowance",
-        args: [userAddress, smartWalletAddress],
+        args: [userAddress, smartAccountAddress],
       })
     );
 
@@ -143,5 +146,50 @@ export const generateApproveSteps = async (
     }
   }
 
-  // Check if the user has enough balance for the tokens
+  return approveSteps;
+};
+
+/**
+ * Generates the transaction steps for the cart
+ * @param smartAccountAddress - The smart wallet address
+ * @param cartItemStates - The cart item states
+ * @param networkId - The network id
+ * @returns The transaction steps
+ */
+export const generateTransactionStep = async (
+  smartAccountAddress: Address,
+  cartItemStates: CartItemStates,
+  networkId: string
+) => {
+  const requests: PortalRequest[] = [];
+
+  for (const item of Object.values(cartItemStates)) {
+    requests.push({
+      smartAccount: smartAccountAddress,
+      inputToken: getEquivalentTokenAddress(
+        item.selectedToken?.address ?? "",
+        ChainIds[item.selectedToken?.network as keyof typeof ChainIds]
+      )!,
+      inputAmount: item.amount,
+      outputToken: item.opportunity?.address ?? "",
+      sourceChainId: networkId,
+      sourceChainToken: item.selectedToken?.address ?? "",
+      destinationChainId:
+        ChainIds[
+          item.selectedToken?.network as keyof typeof ChainIds
+        ].toString(),
+    });
+  }
+
+  const json: RequestBody = {
+    requests,
+  };
+
+  const response = await ky
+    .post<PortalResult>("api/portals/portal-deposit", {
+      json,
+    })
+    .json();
+
+  return response.transactionCalldataToExecute;
 };

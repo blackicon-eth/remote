@@ -20,6 +20,7 @@ import { Trash2 } from "lucide-react";
 import {
   formatNumber,
   generateApproveSteps,
+  generateTransactionStep,
   sanitizeNetworkId,
 } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ import {
 import { useUserBalances } from "../context/user-balances-provider";
 import { RemoteButton } from "./remote-button";
 import { Address } from "viem";
+import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 
 enum CartStatus {
   COMPILING = "compiling",
@@ -53,25 +55,41 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 };
 
 export const Cart = () => {
-  const { userTokens } = useUserBalances();
-  const { isConnected } = useAppKitAccount();
+  const { userTokens, sentinelContractAddress } = useUserBalances();
+  const { isConnected, address: userAddress } = useAppKitAccount();
   const { selectedNetworkId } = useAppKitState();
-  const { open } = useAppKit();
-  const { address: userAddress } = useAppKitAccount();
-  const { address: smartWalletAddress } = useAppKitSmartWallet();
   const { cart, removeFromCart } = useCart();
+  const { open } = useAppKit();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartItemStates, setCartItemStates] = useState<{
     [key: string]: {
       amount: string;
       selectedToken: PortalsToken | null;
+      opportunity: PortalsToken | null;
     };
   }>({});
   const [remainingTokenBalance, setRemainingTokenBalance] = useState<{
     [userTokenKey: PortalsToken["key"]]: number;
   }>({});
+  const [isLoading, setIsLoading] = useState(false);
   const [cartStatus, setCartStatus] = useState<CartStatus>(
     CartStatus.COMPILING
+  );
+
+  // wagmi hooks
+  const {
+    data: hash,
+    isError: isWalletError,
+    writeContract,
+  } = useWriteContract();
+  const { isError: isTxError, isSuccess: isTxSuccess } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
+
+  const isGenericError = useMemo(
+    () => isWalletError || isTxError,
+    [isWalletError, isTxError]
   );
 
   const buttonObject = useMemo(() => {
@@ -79,14 +97,42 @@ export const Cart = () => {
       if (!userAddress) return;
       return {
         text: "Compiling",
-        onClick: () => {
-          const approveSteps = generateApproveSteps(
+        onClick: async () => {
+          setIsLoading(true);
+          const approveSteps = await generateApproveSteps(
             cartItemStates,
             sanitizeNetworkId(selectedNetworkId),
             userAddress as Address,
-            smartWalletAddress as Address
+            sentinelContractAddress?.address as Address
           );
-          setCartStatus(CartStatus.TRANSACTIONS);
+          if (approveSteps.length > 0) {
+            setCartStatus(CartStatus.APPROVING);
+          } else {
+            const callData = await generateTransactionStep(
+              userAddress as Address,
+              cartItemStates,
+              sanitizeNetworkId(selectedNetworkId)
+            );
+            setCartStatus(CartStatus.TRANSACTIONS);
+          }
+        },
+      };
+    } else if (cartStatus === CartStatus.APPROVING) {
+      return {
+        text: isTxError ? "Error" : "Approve",
+        onClick: () => {
+          // TODO: If error retry the approve transaction
+        },
+      };
+    } else if (cartStatus === CartStatus.TRANSACTIONS) {
+      return {
+        text: "Execute",
+        onClick: async () => {
+          const callData = await generateTransactionStep(
+            userAddress as Address,
+            cartItemStates,
+            sanitizeNetworkId(selectedNetworkId)
+          );
         },
       };
     }
@@ -293,6 +339,7 @@ export const Cart = () => {
                                       userWalletTokens?.find(
                                         (token) => token.key === value
                                       ) ?? null,
+                                    opportunity: item,
                                   },
                                 }))
                               }
@@ -398,9 +445,10 @@ export const Cart = () => {
                         state.amount === "" || Number(state.amount) <= 0
                     )
                   }
-                  isLoading={false}
+                  isLoading={isLoading}
+                  onClick={buttonObject?.onClick}
                 >
-                  Deposit
+                  {buttonObject?.text}
                 </RemoteButton>
               </motion.div>
             )}
