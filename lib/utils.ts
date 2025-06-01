@@ -1,11 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import {
-  PortalRequest,
-  PortalResult,
-  PortalsToken,
-  RequestBody,
-} from "./portals/types";
+import { PortalRequest, PortalResult, RequestBody } from "./portals/types";
 import {
   Address,
   createPublicClient,
@@ -21,7 +16,6 @@ import { env } from "./zod";
 import ky from "ky";
 import { CartItemStates, ContractParams, TransactionStep } from "./types";
 import { getEquivalentTokenAddress } from "./constants";
-import { Item } from "@radix-ui/react-dropdown-menu";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

@@ -1,19 +1,11 @@
 import { env } from "@/lib/zod";
 import { NextRequest, NextResponse } from "next/server";
-import {
-  encodeFunctionData,
-  encodeAbiParameters,
-  createPublicClient,
-  http,
-  Chain,
-} from "viem";
+import { encodeAbiParameters, createPublicClient, http, Chain } from "viem";
 import { base, arbitrum, polygon, flowMainnet } from "viem/chains";
 import ky from "ky";
 import {
   chainIdToNetworkName,
   getTokenDecimals,
-  FLOW_STARGATE_OFT_ETH,
-  BASE_CHAIN_EID,
   chainIdToEid,
   getStargateAddress,
   isTokenUsdc,

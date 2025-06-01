@@ -1,6 +1,6 @@
 import { SupportedNetworks } from "./enums";
 import { createPublicClient, http, erc20Abi, Chain, getAddress } from "viem";
-import { base, arbitrum, polygon, flowMainnet, mainnet } from "viem/chains";
+import { base, arbitrum, polygon, flowMainnet } from "viem/chains";
 
 // Supported Networks
 export const SUPPORTED_NETWORKS = [

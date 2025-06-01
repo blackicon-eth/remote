@@ -63,7 +63,8 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 };
 
 export const Cart = () => {
-  const { userTokens, sentinelContractAddress } = useUserBalances();
+  const { userTokens, sentinelContractAddress, refetchUserTokens } =
+    useUserBalances();
   const { isConnected, address: userAddress } = useAppKitAccount();
   const { selectedNetworkId } = useAppKitState();
   const { cart, removeFromCart, clearCart } = useCart();
@@ -86,7 +87,6 @@ export const Cart = () => {
   const [transactionSteps, setTransactionSteps] = useState<TransactionStep[]>(
     []
   );
-  const [isFinished, setIsFinished] = useState(false);
 
   // Function to change the status of a transaction step
   const handleChangeStatus = (
@@ -108,7 +108,6 @@ export const Cart = () => {
   // The current step
   // (the step that is not yet successful)
   const { currentStep, currentStepIndex } = useMemo(() => {
-    console.log("Changing current step");
     const currentStepIndex = transactionSteps.findIndex(
       (step) => step.status !== TransactionStatus.SUCCESS
     );
@@ -153,16 +152,30 @@ export const Cart = () => {
     ]
   );
 
-  // useEffect(() => {
-  //   console.log(cartItemStates);
-  // }, [cartItemStates]);
-
   const buttonObject = useMemo(() => {
     if (isGenericError) {
       return {
-        text: "Retry",
-        onClick: () => {
-          triggerWriteContract(currentStep!);
+        text: cartStatus === CartStatus.COMPILING ? "Deposit" : "Retry",
+        onClick: async () => {
+          setIsLoading(true);
+          const approveSteps = await generateApproveSteps(
+            cartItemStates,
+            sanitizeNetworkId(selectedNetworkId),
+            userAddress as Address,
+            sentinelContractAddress?.address as Address
+          );
+          if (approveSteps.length > 0) {
+            setTransactionSteps(approveSteps);
+            setCartStatus(CartStatus.APPROVING);
+          } else {
+            const transactionStep = await generateTransactionStep(
+              sentinelContractAddress?.address as Address,
+              cartItemStates,
+              sanitizeNetworkId(selectedNetworkId)
+            );
+            setTransactionSteps([transactionStep]);
+            setCartStatus(CartStatus.TRANSACTIONS);
+          }
         },
       };
     } else if (cartStatus === CartStatus.COMPILING) {
@@ -177,8 +190,6 @@ export const Cart = () => {
             userAddress as Address,
             sentinelContractAddress?.address as Address
           );
-          // const approveSteps: any[] = [];
-          console.log("approveSteps", approveSteps);
           if (approveSteps.length > 0) {
             setTransactionSteps(approveSteps);
             setCartStatus(CartStatus.APPROVING);
@@ -188,7 +199,6 @@ export const Cart = () => {
               cartItemStates,
               sanitizeNetworkId(selectedNetworkId)
             );
-            console.log("transactionStep", transactionStep);
             setTransactionSteps([transactionStep]);
             setCartStatus(CartStatus.TRANSACTIONS);
           }
@@ -204,6 +214,7 @@ export const Cart = () => {
           setIsLoading(false);
           setTransactionSteps([]);
           clearCart();
+          refetchUserTokens();
         },
       };
     }
@@ -260,7 +271,6 @@ export const Cart = () => {
       );
 
       setIsLoading(false);
-      setIsFinished(true);
       setTimeout(() => {
         setCartStatus(CartStatus.FINISHED);
       }, 1250);
@@ -299,11 +309,7 @@ export const Cart = () => {
         );
 
         // If we finished all approvals, generate the transaction steps and start the transactions
-        if (
-          transactionSteps.every(
-            (step) => step.status === TransactionStatus.SUCCESS
-          )
-        ) {
+        if (currentStepIndex === transactionSteps.length - 1) {
           const transactionStep = await generateTransactionStep(
             sentinelContractAddress?.address as Address,
             cartItemStates,
@@ -341,7 +347,6 @@ export const Cart = () => {
       );
 
       setIsLoading(false);
-      setIsFinished(true);
       setTimeout(() => {
         setCartStatus(CartStatus.FINISHED);
       }, 1250);
@@ -684,16 +689,25 @@ export const Cart = () => {
                           key={index}
                           className="flex justify-between items-center w-full min-h-[44px] sm:min-h-0"
                         >
-                          <div className="flex justify-start items-center w-full gap-6 px-4">
+                          <div className="flex justify-start items-center w-full gap-4 px-4">
                             {/* Status */}
                             <StatusIndicator status={step.status} />
 
-                            {/* Tokens */}
-                            <p className="text-lg font-medium">
-                              {step.type === "approve"
-                                ? "Approve"
-                                : "Send Tokens"}
-                            </p>
+                            <div className="flex justify-center items-center gap-2">
+                              {/* Asset image */}
+                              <img
+                                src={step.asset?.image}
+                                alt={step.asset?.symbol}
+                                className="rounded-full object-cover size-[30px]"
+                              />
+
+                              {/* Tokens */}
+                              <p className="text-lg font-medium">
+                                {step.type === "approve"
+                                  ? `Approve ${step.asset?.symbol}`
+                                  : "Send Tokens"}
+                              </p>
+                            </div>
                           </div>
 
                           {/* Tx hashes */}
