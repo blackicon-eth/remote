@@ -77,6 +77,7 @@ export interface PortalItem {
     sendParam: any;
     messagingFee: any;
   } | null;
+  stargateAddress?: string | null;
   error?: string;
 }
 
