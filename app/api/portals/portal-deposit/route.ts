@@ -218,7 +218,6 @@ export const POST = async (request: NextRequest) => {
                   req.sourceChainId!,
                   req.sourceChainToken
                 );
-               
 
                 const result = await client.readContract({
                   address: req.smartAccount as `0x${string}`, //req.smartAccount as `0x${string}`
@@ -327,7 +326,6 @@ export const POST = async (request: NextRequest) => {
               BigInt(result.prepareResult.valueToSend), // uint256 _nativeAmount
             ]
           );
-         
         }
       } else {
         // Batch operation - use executeBatchStargate
@@ -381,6 +379,7 @@ export const POST = async (request: NextRequest) => {
 
     const finalResult: PortalResult = {
       composeMsg: processedResults.map((r) => r.composeMsg),
+      // @ts-ignore
       prepareResult: processedResults.map((r) => r.prepareResult || null),
       valueToSend: totalValueToSend,
       transactionCalldataToExecute,

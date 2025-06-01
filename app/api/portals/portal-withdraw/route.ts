@@ -403,6 +403,7 @@ export const POST = async (request: NextRequest) => {
 
     const finalResult: PortalResult = {
       composeMsg: processedResults.map((r) => r.composeMsg),
+      // @ts-ignore
       prepareResult: processedResults.map((r) => r.prepareResult || null),
       valueToSend: totalValueToSend,
       transactionCalldataToExecute,
