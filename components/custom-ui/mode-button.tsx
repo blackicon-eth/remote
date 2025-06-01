@@ -11,7 +11,6 @@ interface ModeButtonProps {
   setSelectedMode: (mode: ListModes) => void;
   glowColor?: string;
   borderColor?: string;
-  index?: number;
 }
 
 export const ModeButton = ({
@@ -21,7 +20,6 @@ export const ModeButton = ({
   setSelectedMode,
   glowColor = "#42b5d4",
   borderColor = "#42b5d4",
-  index = 0,
 }: ModeButtonProps) => {
   const { isConnected } = useAppKitAccount();
   const { open } = useAppKit();
@@ -59,7 +57,6 @@ export const ModeButton = ({
     >
       <BackgroundGradient
         selected={isSelected}
-        index={index}
         glowColor={glowColor}
         borderColor={borderColor}
         className="relative flex items-center justify-center rounded-[22px] w-[150px] h-[50px] bg-neutral-900 cursor-pointer gap-3"

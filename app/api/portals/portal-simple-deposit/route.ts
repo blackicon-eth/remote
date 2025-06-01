@@ -11,13 +11,11 @@ import {
   EMPTY_ADDRESS,
 } from "@/lib/constants";
 import { REMOTE_ACCOUNT_ABI } from "@/lib/abi";
-import { encodeStargateTransactionCalldata } from "@/lib/stargate/utils";
 import {
   PortalsApiResponse,
   PortalItem,
   PortalRequest,
   RequestBody,
-  PortalResult,
 } from "@/lib/portals/types";
 
 const PORTALS_API_BASE_URL = "https://api.portals.fi/v2";

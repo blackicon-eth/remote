@@ -12,7 +12,6 @@ interface ChainButtonProps {
   imageSize?: number;
   glowColor?: string;
   borderColor?: string;
-  index?: number;
 }
 
 export const ChainButton = ({
@@ -25,13 +24,14 @@ export const ChainButton = ({
   imageSize = 28,
   glowColor = "#42b5d4",
   borderColor = "#42b5d4",
-  index = 0,
 }: ChainButtonProps) => {
   const isSelected = selectedChains.includes(chain as SupportedNetworks);
 
   const handleClick = () => {
     if (isSelected) {
-      setSelectedChains(selectedChains.filter((c) => c !== (chain as SupportedNetworks)));
+      setSelectedChains(
+        selectedChains.filter((c) => c !== (chain as SupportedNetworks))
+      );
     } else {
       setSelectedChains(selectedChains.concat(chain as SupportedNetworks));
     }
@@ -46,7 +46,6 @@ export const ChainButton = ({
     >
       <BackgroundGradient
         selected={isSelected}
-        index={index}
         glowColor={glowColor}
         borderColor={borderColor}
         className="relative flex items-center justify-center rounded-[22px] w-[150px] h-[50px] bg-neutral-900 cursor-pointer gap-3"
@@ -59,7 +58,9 @@ export const ChainButton = ({
           className="object-contain"
         />
         {text && (
-          <p className="text-base sm:text-lg text-white font-bold dark:text-neutral-200">{text}</p>
+          <p className="text-base sm:text-lg text-white font-bold dark:text-neutral-200">
+            {text}
+          </p>
         )}
       </BackgroundGradient>
     </motion.button>

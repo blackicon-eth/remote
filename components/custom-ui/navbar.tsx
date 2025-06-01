@@ -16,6 +16,7 @@ import {
 import { getEnsNameAndAvatar } from "@/lib/ens";
 import { truncateAddress } from "@/lib/utils";
 import { Cart } from "./cart";
+import { HowItWorks } from "./how-it-works";
 
 export const Navbar = () => {
   const [ensInfo, setEnsInfo] = useState<{
@@ -49,6 +50,7 @@ export const Navbar = () => {
         Remote
       </h2>
       <div className="flex items-center gap-2">
+        <HowItWorks />
         <AnimatePresence mode="wait">
           {isConnected ? (
             <DropdownMenu>

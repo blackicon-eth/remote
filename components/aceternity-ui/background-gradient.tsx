@@ -11,7 +11,6 @@ interface BackgroundGradientProps {
   animate?: boolean;
   glowColor?: string;
   borderColor?: string;
-  index?: number;
   selected?: boolean;
 }
 
@@ -22,7 +21,6 @@ export const BackgroundGradient = ({
   animate = true,
   glowColor = "#13d113",
   borderColor = "#13d113",
-  index = 0,
   selected = false,
 }: BackgroundGradientProps) => {
   const variants = {

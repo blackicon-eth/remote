@@ -3,7 +3,6 @@ import { Input } from "../shadcn-ui/input";
 import {
   extractStepParams,
   formatNumber,
-  generateTransactionStep,
   generateWithdrawTransactionStep,
   sanitizeNetworkId,
 } from "@/lib/utils";
