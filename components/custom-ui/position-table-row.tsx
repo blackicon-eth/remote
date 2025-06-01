@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { PortalsToken } from "@/lib/portals/types";
 import { ChainImages } from "@/lib/constants";
 import { SupportedNetworks } from "@/lib/enums";
@@ -11,19 +11,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/shadcn-ui/dialog";
-import { useEffect, useState } from "react";
-import { Input } from "@/components/shadcn-ui/input";
-import { useUserBalances } from "../context/user-balances-provider";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../shadcn-ui/select";
-import { RemoteButton } from "./remote-button";
-import { useAppKitState } from "@reown/appkit/react";
-import { TransactionStep } from "@/lib/types";
+import { useState } from "react";
+import { WithdrawPosition } from "./withdraw-position";
 
 interface PositionTableRowProps {
   position: PortalsToken;
@@ -31,50 +20,15 @@ interface PositionTableRowProps {
   index: number;
 }
 
-enum PositionTableRowStatus {
-  COMPILING = "compiling",
-  APPROVING = "approving",
-  TRANSACTIONS = "transactions",
-  FINISHED = "finished",
-}
-
 export const PositionTableRow = ({
   position,
   isLast,
   index,
 }: PositionTableRowProps) => {
-  const { userTokens } = useUserBalances();
-  const { selectedNetworkId } = useAppKitState();
-  const [amount, setAmount] = useState<string>("");
-  const [selectedDepositToken, setSelectedDepositToken] =
-    useState<PortalsToken | null>(null);
-  const [selectedMode, setSelectedMode] = useState<"deposit" | "withdraw">(
-    "deposit"
-  );
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [positionTableRowStatus, setPositionTableRowStatus] =
-    useState<PositionTableRowStatus>(PositionTableRowStatus.COMPILING);
-  const [transactionSteps, setTransactionSteps] = useState<TransactionStep[]>(
-    []
-  );
 
   // If the position has images, use them, otherwise use the single image
   const positionImages = position.images ?? [position.image];
-
-  // Get the user tokens he has in his wallet
-  const userWalletTokens = userTokens?.tokens;
-
-  // If the mode changes, reset the amount
-  useEffect(() => {
-    setAmount("");
-  }, [selectedMode]);
-
-  // When the connected network changes, close the modal
-  useEffect(() => {
-    setSelectedDepositToken(null);
-    setIsModalOpen(false);
-  }, [selectedNetworkId]);
 
   return (
     <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -149,7 +103,7 @@ export const PositionTableRow = ({
           </div>
         </motion.button>
       </DialogTrigger>
-      <DialogContent className="bg-neutral-950 border-neutral-800 text-white">
+      <DialogContent className="bg-neutral-950 border-neutral-800 text-white gap-6">
         <DialogHeader>
           <DialogTitle className="flex justify-center items-center text-2xl gap-2">
             <img
@@ -161,220 +115,11 @@ export const PositionTableRow = ({
           </DialogTitle>
           <DialogDescription className="hidden" />
         </DialogHeader>
-        <div className="flex justify-between items-center px-2 py-1.5 gap-3">
-          <button
-            className={cn(
-              "w-full text-center bg-neutral-900 hover:bg-neutral-800 rounded-lg px-2 py-1.5 cursor-pointer transition-all duration-300",
-              selectedMode === "deposit" && "bg-neutral-800"
-            )}
-            onClick={() => setSelectedMode("deposit")}
-          >
-            Deposit
-          </button>
-          <button
-            className={cn(
-              "w-full text-center bg-neutral-900 hover:bg-neutral-800 rounded-lg px-2 py-1.5 cursor-pointer transition-all duration-300",
-              selectedMode === "withdraw" && "bg-neutral-800"
-            )}
-            onClick={() => setSelectedMode("withdraw")}
-          >
-            Withdraw
-          </button>
-        </div>
-        <AnimatePresence mode="wait">
-          {selectedMode === "deposit" ? (
-            <motion.div
-              key="deposit"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex justify-center items-center w-full h-full"
-            >
-              <div className="flex flex-col justify-center items-start w-full gap-1">
-                <label className="text-sm text-neutral-400 px-1">Amount</label>
-                <div className="flex flex-col justify-center items-start w-full border border-neutral-700 rounded-lg p-4 h-[100px] gap-3">
-                  <div className="flex justify-between items-center w-full gap-2">
-                    <Input
-                      className="border-none md:text-xl font-medium"
-                      type="number"
-                      placeholder="0.00"
-                      value={amount}
-                      disabled={!selectedDepositToken}
-                      onChange={(e) => {
-                        const value = e.target.value;
-
-                        if (value.startsWith("-")) {
-                          setAmount("");
-                        } else if (value === "" || Number(value) >= 0) {
-                          if (
-                            Number(value) > (selectedDepositToken?.balance ?? 0)
-                          ) {
-                            setAmount(
-                              selectedDepositToken?.balance?.toString() ?? "0"
-                            );
-                          } else {
-                            setAmount(value);
-                          }
-                        }
-                      }}
-                    />
-                    {userWalletTokens && userWalletTokens?.length > 0 ? (
-                      <Select
-                        value={selectedDepositToken?.key}
-                        onValueChange={(value) =>
-                          setSelectedDepositToken(
-                            userWalletTokens?.find(
-                              (token) => token.key === value
-                            ) ?? null
-                          )
-                        }
-                      >
-                        <SelectTrigger className="w-[200px]">
-                          <SelectValue placeholder="Select Token" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {userWalletTokens?.map((token) => (
-                            <SelectItem key={token.key} value={token.key}>
-                              <img
-                                src={token.image}
-                                alt={token.symbol}
-                                className="rounded-full object-cover size-[20px]"
-                              />
-                              {token.symbol}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <div className="w-[200px] text-end text-neutral-400 text-sm leading-none">
-                        You have no tokens on this network
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-between items-center w-full pl-2 pr-1">
-                    <p className="text-xs text-neutral-400">
-                      $
-                      {formatNumber(
-                        Number(amount) * (selectedDepositToken?.price ?? 0)
-                      )}
-                    </p>
-                    <div className="flex justify-center items-center gap-1">
-                      <p className="text-xs text-neutral-400">Balance:</p>
-                      <p className="text-xs text-neutral-400">
-                        ${formatNumber(selectedDepositToken?.balanceUSD ?? 0)}
-                      </p>
-                      <button
-                        className={cn(
-                          "text-xs text-neutral-400 underline hover:text-white transition-all duration-300 cursor-pointer",
-                          !selectedDepositToken &&
-                            "hover:text-neutral-400 cursor-default no-underline"
-                        )}
-                        disabled={!selectedDepositToken}
-                        onClick={() =>
-                          setAmount(
-                            selectedDepositToken?.balance?.toString() ?? "0"
-                          )
-                        }
-                      >
-                        Max
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="withdraw"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex justify-center items-center w-full h-full"
-            >
-              <div className="flex flex-col justify-center items-start w-full gap-1">
-                <label className="text-sm text-neutral-400 px-1">Amount</label>
-                <div className="flex flex-col justify-center items-start w-full border border-neutral-700 rounded-lg p-4 h-[100px] gap-3">
-                  <div className="flex justify-between items-center w-full gap-2">
-                    <Input
-                      className="border-none md:text-xl font-medium"
-                      type="number"
-                      placeholder="0.00"
-                      value={amount}
-                      onChange={(e) => {
-                        const value = e.target.value;
-
-                        if (value.startsWith("-")) {
-                          setAmount("");
-                        } else if (value === "" || Number(value) >= 0) {
-                          if (Number(value) > (position.balance ?? 0)) {
-                            setAmount(position.balance?.toString() ?? "0");
-                          } else {
-                            setAmount(value);
-                          }
-                        }
-                      }}
-                    />
-                    {positionImages.slice(1).map((image, index) => (
-                      <img
-                        key={index}
-                        src={image}
-                        alt={position.name}
-                        className="rounded-full object-cover"
-                        style={{
-                          marginLeft:
-                            index === 0
-                              ? 0
-                              : positionImages.length > 4
-                              ? -20
-                              : -14,
-                          width: positionImages.length === 2 ? "38px" : "33px",
-                          height: positionImages.length === 2 ? "38px" : "33px",
-                        }}
-                      />
-                    ))}
-                  </div>
-
-                  <div className="flex justify-between items-center w-full pl-2 pr-1">
-                    <p className="text-xs text-neutral-400">
-                      ${formatNumber(Number(amount) * position.price)}
-                    </p>
-                    <div className="flex justify-center items-center gap-1">
-                      <p className="text-xs text-neutral-400">Balance:</p>
-                      <p className="text-xs text-neutral-400">
-                        ${formatNumber(position.balanceUSD ?? 0)}
-                      </p>
-                      <button
-                        className="text-xs text-neutral-400 underline hover:text-white transition-all duration-300 cursor-pointer"
-                        onClick={() =>
-                          setAmount(position.balance?.toString() ?? "0")
-                        }
-                      >
-                        Max
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <RemoteButton
-          className="w-full rounded-lg"
-          containerClassName="w-full rounded-lg"
-          hoverZoom={1.005}
-          tapZoom={0.995}
-          disabled={
-            selectedMode === "deposit"
-              ? !selectedDepositToken ||
-                Number(amount) <= 0 ||
-                Number(amount) > (selectedDepositToken?.balance ?? 0) ||
-                Number(amount) > (position.balance ?? 0)
-              : Number(amount) <= 0 || Number(amount) > (position.balance ?? 0)
-          }
-        >
-          {selectedMode === "deposit" ? "Deposit" : "Withdraw"}
-        </RemoteButton>
+        <WithdrawPosition
+          key="withdraw"
+          setIsModalOpen={setIsModalOpen}
+          position={position}
+        />
       </DialogContent>
     </Dialog>
   );

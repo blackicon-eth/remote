@@ -1,6 +1,11 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { PortalRequest, PortalResult, RequestBody } from "./portals/types";
+import {
+  PortalRequest,
+  PortalResult,
+  PortalsToken,
+  RequestBody,
+} from "./portals/types";
 import {
   Address,
   createPublicClient,
@@ -15,9 +20,10 @@ import { AlchemyRpcBaseUrls, ChainIds, TransactionStatus } from "./enums";
 import { env } from "./zod";
 import ky from "ky";
 import { CartItemStates, ContractParams, TransactionStep } from "./types";
-import { getEquivalentTokenAddress } from "./constants";
+import { EMPTY_ADDRESS, getEquivalentTokenAddress } from "./constants";
 import { useEffect } from "react";
 import { useState } from "react";
+import { STARGATE_ABI } from "./abi";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -80,13 +86,11 @@ export const sanitizeNetworkId = (networkId: string | undefined) => {
  * @param cartItemStates - The cart item states
  * @param networkId - The network id
  * @param userAddress - The user address
- * @param smartAccountAddress - The smart wallet address
  */
 export const generateApproveSteps = async (
   cartItemStates: CartItemStates,
   networkId: string,
-  userAddress: Address,
-  smartAccountAddress: Address
+  userAddress: Address
 ) => {
   const connectedChain = networks.find(
     (network) => network.id === Number(networkId)
@@ -136,7 +140,10 @@ export const generateApproveSteps = async (
         address: getAddress(token.toLowerCase() as Address),
         abi: erc20Abi,
         functionName: "allowance",
-        args: [userAddress, smartAccountAddress],
+        args: [
+          userAddress,
+          "0xAF54BE5B6eEc24d6BFACf1cce4eaF680A8239398", // TODO: Get this from somewhere
+        ],
       })
     );
 
@@ -149,7 +156,7 @@ export const generateApproveSteps = async (
           "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
         ),
         asset: tokenState?.selectedToken!,
-        spender: smartAccountAddress,
+        spender: "0xAF54BE5B6eEc24d6BFACf1cce4eaF680A8239398", // TODO: Get this from somewhere
       });
     }
   }
@@ -165,6 +172,7 @@ export const generateApproveSteps = async (
  * @returns The transaction steps
  */
 export const generateTransactionStep = async (
+  userAddress: Address,
   smartAccountAddress: Address,
   cartItemStates: CartItemStates,
   networkId: string
@@ -199,12 +207,26 @@ export const generateTransactionStep = async (
     })
     .json();
 
+  const prepareResult = response.prepareResult;
+  const valueToSend = response.prepareResult.valueToSend;
+  const stargateAddress = response.stargateAddress;
+
+  console.log("prepareResult", prepareResult);
+  console.log("valueToSend", valueToSend);
+  console.log("stargateAddress", stargateAddress);
+
   return {
     type: "transaction",
     status: TransactionStatus.TO_SEND,
     originTransaction: null,
-    callData: response.transactionCalldataToExecute as Hex,
-    valueToSend: response.valueToSend as string,
+    targetAddress: stargateAddress as Address,
+    valueToSend: valueToSend as string,
+    callData: response.composeMsg[0] as Hex,
+    args: {
+      sendParam: prepareResult.sendParam,
+      messagingFee: prepareResult.messagingFee,
+      refundAddress: userAddress,
+    },
   };
 };
 
@@ -216,24 +238,31 @@ export const generateTransactionStep = async (
  */
 export const extractStepParams = (
   step: TransactionStep,
-  networkId: string,
-  smartAccountAddress: Address
+  networkId: string
 ): ContractParams => {
   if (step.type === "approve") {
     return {
       abi: erc20Abi,
       functionName: "approve",
       address: step.asset!.address as Address,
-      args: [step.spender as Address, step.allowanceAmount],
+      args: [
+        "0xAF54BE5B6eEc24d6BFACf1cce4eaF680A8239398", // TODO: Get this from somewhere
+        step.allowanceAmount,
+      ],
       chainId: Number(networkId),
     };
   } else {
-    // TODO: Do this
     return {
-      address: smartAccountAddress,
-      callData: step.callData,
+      abi: STARGATE_ABI,
+      functionName: "sendToken",
+      address: step.targetAddress as Address,
+      args: [
+        step.args?.sendParam,
+        step.args?.messagingFee,
+        step.args?.refundAddress,
+      ],
       chainId: Number(networkId),
-      valueToSend: step.valueToSend,
+      value: step.valueToSend as string,
     };
   }
 };
@@ -253,4 +282,62 @@ export const useDebounce = <T>(value: T, delay: number): T => {
   }, [value, delay]);
 
   return debouncedValue;
+};
+
+export const generateWithdrawTransactionStep = async (
+  userAddress: Address,
+  smartAccountAddress: Address,
+  position: PortalsToken,
+  networkId: string,
+  amount: string
+): Promise<TransactionStep> => {
+  const requests: PortalRequest[] = [];
+
+  requests.push({
+    smartAccount: smartAccountAddress,
+    inputToken: position.address,
+    inputAmount: amount,
+    outputToken: EMPTY_ADDRESS,
+    sourceChainId: networkId,
+    sourceChainToken: getEquivalentTokenAddress(
+      "0x4200000000000000000000000000000000000006",
+      networkId
+    )!,
+    destinationChainId:
+      ChainIds[position.network as keyof typeof ChainIds].toString(),
+  });
+
+  console.log("requests", requests);
+
+  const json: RequestBody = {
+    requests,
+  };
+
+  const response = await ky
+    .post<PortalResult>("api/portals/portal-simple-withdraw", {
+      json,
+    })
+    .json();
+
+  const prepareResult = response.prepareResult;
+  const valueToSend = response.prepareResult.valueToSend;
+  const stargateAddress = response.stargateAddress;
+
+  console.log("prepareResult", prepareResult);
+  console.log("valueToSend", valueToSend);
+  console.log("stargateAddress", stargateAddress);
+
+  return {
+    type: "transaction",
+    status: TransactionStatus.TO_SEND,
+    originTransaction: null,
+    targetAddress: stargateAddress as Address,
+    valueToSend: valueToSend as string,
+    callData: response.composeMsg[0] as Hex,
+    args: {
+      sendParam: prepareResult.sendParam,
+      messagingFee: prepareResult.messagingFee,
+      refundAddress: userAddress,
+    },
+  };
 };

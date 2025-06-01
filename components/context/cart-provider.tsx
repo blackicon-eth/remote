@@ -26,10 +26,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Add an element to the cart
   const addToCart = useCallback(
     (token: PortalsToken) => {
-      if (cart.length < 3) {
+      if (cart.length < 1) {
         setCart([...cart, token]);
       } else {
-        toast.error("You can only add up to 3 tokens to the cart");
+        toast.error("You can only add up to 1 tokens to the cart for now");
       }
     },
     [cart]

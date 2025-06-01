@@ -1,32 +1,21 @@
 import { env } from "@/lib/zod";
 import { NextRequest, NextResponse } from "next/server";
-import {
-  encodeFunctionData,
-  encodeAbiParameters,
-  createPublicClient,
-  http,
-  Chain,
-} from "viem";
+import { encodeAbiParameters, createPublicClient, http, Chain } from "viem";
 import { base, arbitrum, polygon, flowMainnet } from "viem/chains";
 import ky from "ky";
 import {
   chainIdToNetworkName,
   getTokenDecimals,
-  FLOW_STARGATE_OFT_ETH,
-  BASE_CHAIN_EID,
   chainIdToEid,
   getStargateAddress,
   isTokenUsdc,
-  EMPTY_ADDRESS,
 } from "@/lib/constants";
 import { REMOTE_ACCOUNT_ABI } from "@/lib/abi";
-import { encodeStargateTransactionCalldata } from "@/lib/stargate/utils";
 import {
   PortalsApiResponse,
   PortalItem,
   PortalRequest,
   RequestBody,
-  PortalResult,
 } from "@/lib/portals/types";
 
 const PORTALS_API_BASE_URL = "https://api.portals.fi/v2";

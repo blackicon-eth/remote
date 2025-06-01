@@ -87,11 +87,12 @@ export interface RequestBody {
 
 export interface PortalResult {
   composeMsg: string[];
-  prepareResult: Array<{
+  stargateAddress: string;
+  prepareResult: {
     valueToSend: string;
     sendParam: any;
     messagingFee: any;
-  } | null>;
+  };
   valueToSend: string;
   transactionCalldataToExecute: string; // Single field, not array
   isBatch: boolean;

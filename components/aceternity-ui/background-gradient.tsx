@@ -41,7 +41,6 @@ export const BackgroundGradient = ({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ delay: index * 0.2, duration: 0.6 }}
       className={cn("relative p-[2px] group", containerClassName)}
     >
       <motion.div
@@ -86,7 +85,9 @@ export const BackgroundGradient = ({
         className="absolute inset-0 rounded-3xl z-[1] opacity-25 will-change-transform"
       />
 
-      <div className={cn("relative z-10 w-[150px] h-[56px]", className)}>{children}</div>
+      <div className={cn("relative z-10 w-[150px] h-[56px]", className)}>
+        {children}
+      </div>
     </motion.div>
   );
 };

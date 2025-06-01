@@ -26,6 +26,12 @@ export type TransactionStep = {
   valueToSend?: string;
   allowanceAmount?: bigint;
   spender?: Address;
+  targetAddress?: Address;
+  args?: {
+    sendParam: any;
+    messagingFee: any;
+    refundAddress: Address;
+  };
 };
 
 export type ContractParams = {
@@ -35,5 +41,5 @@ export type ContractParams = {
   args?: readonly unknown[];
   chainId: number;
   callData?: Hex;
-  valueToSend?: string;
+  value?: string;
 };

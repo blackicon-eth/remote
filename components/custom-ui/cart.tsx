@@ -36,11 +36,7 @@ import {
 import { useUserBalances } from "../context/user-balances-provider";
 import { RemoteButton } from "./remote-button";
 import { Address, Hex } from "viem";
-import {
-  useSendTransaction,
-  useWaitForTransactionReceipt,
-  useWriteContract,
-} from "wagmi";
+import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { TransactionStep } from "@/lib/types";
 import { TransactionStatus } from "@/lib/enums";
 import StatusIndicator from "./status-indicator";
@@ -115,37 +111,19 @@ export const Cart = () => {
 
   // wagmi hooks
   const {
-    data: approveHash,
-    isError: isApproveWalletError,
+    data: txHash,
+    isError: isTxWalletError,
     writeContract,
   } = useWriteContract();
-  const {
-    data: transactionHash,
-    isError: isTransactionWalletError,
-    sendTransaction,
-  } = useSendTransaction();
-  const { isError: isApproveTxError, isSuccess: isApproveTxSuccess } =
+  const { isError: isTxError, isSuccess: isTxSuccess } =
     useWaitForTransactionReceipt({
-      hash: approveHash,
-    });
-  const { isError: isTransactionTxError, isSuccess: isTransactionTxSuccess } =
-    useWaitForTransactionReceipt({
-      hash: transactionHash,
+      hash: txHash,
     });
 
   // Whether there is an error
   const isGenericError = useMemo(
-    () =>
-      isApproveWalletError ||
-      isTransactionWalletError ||
-      isApproveTxError ||
-      isTransactionTxError,
-    [
-      isApproveWalletError,
-      isTransactionWalletError,
-      isApproveTxError,
-      isTransactionTxError,
-    ]
+    () => isTxWalletError || isTxError,
+    [isTxWalletError, isTxError]
   );
 
   const buttonObject = useMemo(() => {
@@ -157,14 +135,14 @@ export const Cart = () => {
           const approveSteps = await generateApproveSteps(
             cartItemStates,
             sanitizedNetworkId,
-            userAddress as Address,
-            sentinelContractAddress?.address as Address
+            userAddress as Address
           );
           if (approveSteps.length > 0) {
             setTransactionSteps(approveSteps);
             setCartStatus(CartStatus.APPROVING);
           } else {
             const transactionStep = await generateTransactionStep(
+              userAddress as Address,
               sentinelContractAddress?.address as Address,
               cartItemStates,
               sanitizedNetworkId
@@ -183,14 +161,14 @@ export const Cart = () => {
           const approveSteps = await generateApproveSteps(
             cartItemStates,
             sanitizedNetworkId,
-            userAddress as Address,
-            sentinelContractAddress?.address as Address
+            userAddress as Address
           );
           if (approveSteps.length > 0) {
             setTransactionSteps(approveSteps);
             setCartStatus(CartStatus.APPROVING);
           } else {
             const transactionStep = await generateTransactionStep(
+              userAddress as Address,
               sentinelContractAddress?.address as Address,
               cartItemStates,
               sanitizedNetworkId
@@ -232,45 +210,8 @@ export const Cart = () => {
       null
     );
     // Extract the write contract params
-    const writeContractParams = extractStepParams(
-      step,
-      sanitizedNetworkId,
-      sentinelContractAddress?.address as Address
-    );
-
-    if (step.type === "approve") {
-      writeContract(writeContractParams as any);
-    } else {
-      console.log("Sending transaction", writeContractParams);
-      sendTransaction({
-        to: writeContractParams.address,
-        data: writeContractParams.callData,
-        value: BigInt(writeContractParams.valueToSend ?? "0"),
-      });
-      // console.log("isTransactionTxSuccess", isTransactionTxSuccess);
-      // const originTransaction = {
-      //   hash: transactionHash!,
-      //   link: `${
-      //     sanitizedNetworkId === "747"
-      //       ? "https://evm.flowscan.io/"
-      //       : sanitizedNetworkId === "30"
-      //       ? "https://explorer.rootstock.io/"
-      //       : "https://flarescan.com/"
-      //   }/tx/${transactionHash}`,
-      // };
-
-      // // Update the status of the current step to success
-      // handleChangeStatus(
-      //   currentStepIndex,
-      //   TransactionStatus.SUCCESS,
-      //   originTransaction
-      // );
-
-      // setIsLoading(false);
-      // setTimeout(() => {
-      //   setCartStatus(CartStatus.FINISHED);
-      // }, 1250);
-    }
+    const writeContractParams = extractStepParams(step, sanitizedNetworkId);
+    writeContract(writeContractParams as any);
   };
 
   // Update the status of the current step to error
@@ -281,20 +222,20 @@ export const Cart = () => {
     }
   }, [isGenericError]);
 
-  // Update the status of the current approve step to success
+  // Update the status of the current step to success
   useEffect(() => {
-    const handleApproveTxSuccess = async () => {
-      if (isApproveTxSuccess) {
-        console.log("isApproveTxSuccess", isApproveTxSuccess);
+    const handleTxSuccess = async () => {
+      if (isTxSuccess) {
+        console.log("isTxSuccess", isTxSuccess);
         const originTransaction = {
-          hash: approveHash!,
+          hash: txHash!,
           link: `${
             sanitizedNetworkId === "747"
               ? "https://evm.flowscan.io/"
               : sanitizedNetworkId === "30"
               ? "https://explorer.rootstock.io/"
               : "https://flarescan.com/"
-          }/tx/${approveHash}`,
+          }/tx/${txHash}`,
         };
 
         // Update the status of the current step to success
@@ -305,51 +246,30 @@ export const Cart = () => {
         );
 
         // If we finished all approvals, generate the transaction steps and start the transactions
-        if (currentStepIndex === transactionSteps.length - 1) {
+        if (
+          currentStepIndex === transactionSteps.length - 1 &&
+          cartStatus === CartStatus.APPROVING
+        ) {
           const transactionStep = await generateTransactionStep(
+            userAddress as Address,
             sentinelContractAddress?.address as Address,
             cartItemStates,
             sanitizedNetworkId
           );
+          setCartStatus(CartStatus.TRANSACTIONS);
           setTransactionSteps((prev) => [...prev, transactionStep]);
-          setTimeout(() => {
-            setCartStatus(CartStatus.TRANSACTIONS);
-          }, 1000);
+        } else if (
+          currentStepIndex === transactionSteps.length - 1 &&
+          cartStatus === CartStatus.TRANSACTIONS
+        ) {
+          setCartStatus(CartStatus.FINISHED);
+          setIsLoading(false);
         }
       }
     };
 
-    handleApproveTxSuccess();
-  }, [isApproveTxSuccess]);
-
-  // Update the status of the current transaction step to success
-  useEffect(() => {
-    if (isTransactionTxSuccess) {
-      console.log("isTransactionTxSuccess", isTransactionTxSuccess);
-      const originTransaction = {
-        hash: transactionHash!,
-        link: `${
-          sanitizedNetworkId === "747"
-            ? "https://evm.flowscan.io/"
-            : sanitizedNetworkId === "30"
-            ? "https://explorer.rootstock.io/"
-            : "https://flarescan.com/"
-        }/tx/${transactionHash}`,
-      };
-
-      // Update the status of the current step to success
-      handleChangeStatus(
-        currentStepIndex,
-        TransactionStatus.SUCCESS,
-        originTransaction
-      );
-
-      setIsLoading(false);
-      setTimeout(() => {
-        setCartStatus(CartStatus.FINISHED);
-      }, 1250);
-    }
-  }, [isTransactionTxSuccess]);
+    handleTxSuccess();
+  }, [isTxSuccess]);
 
   // Automatically start the transaction if the current step is to send
   useEffect(() => {
