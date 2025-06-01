@@ -44,7 +44,7 @@ export const POST = async (request: NextRequest) => {
       chain: base,
       transport: http(),
     });
-
+/*
     const walletClientArbitrum = createWalletClient({
       account: account,
       chain: arbitrum,
@@ -56,7 +56,7 @@ export const POST = async (request: NextRequest) => {
       chain: flare,
       transport: http(),
     });
-
+*/
     const walletClientRootstock = createWalletClient({
       account: account,
       chain: rootstock,
@@ -77,7 +77,7 @@ export const POST = async (request: NextRequest) => {
     });
 
     // Execute transactions on all chains in parallel
-    /*
+    
     const transactionPromises = [
       walletClientBase
         .sendTransaction({
@@ -97,7 +97,46 @@ export const POST = async (request: NextRequest) => {
           success: false,
           error: error.message,
         })),
+        walletClientRootstock
+        .sendTransaction({
+          to: FACTORY_CONTRACT_ADDRESS,
+          data: data,
+        })
+        .then((hash) => ({
+          chain: "rootstock",
+          chainId: rootstock.id,
+          hash,
+          success: true,
+        }))
+        .catch((error) => ({
+          chain: "rootstock",
+          chainId: rootstock.id,
+          hash: null,
+          success: false,
+          error: error.message,
+        })),
 
+      walletClientFlow
+        .sendTransaction({
+          to: FACTORY_CONTRACT_ADDRESS,
+          data: data,
+        })
+        .then((hash) => ({
+          chain: "flow",
+          chainId: flowMainnet.id,
+          hash,
+          success: true,
+        }))
+        .catch((error) => ({
+          chain: "flow",
+          chainId: flowMainnet.id,
+          hash: null,
+          success: false,
+          error: error.message,
+        })),
+    ];
+
+/*
       walletClientArbitrum
         .sendTransaction({
           to: FACTORY_CONTRACT_ADDRESS,
@@ -136,57 +175,21 @@ export const POST = async (request: NextRequest) => {
           error: error.message,
         })),
 
-      walletClientRootstock
-        .sendTransaction({
-          to: FACTORY_CONTRACT_ADDRESS,
-          data: data,
-        })
-        .then((hash) => ({
-          chain: "rootstock",
-          chainId: rootstock.id,
-          hash,
-          success: true,
-        }))
-        .catch((error) => ({
-          chain: "rootstock",
-          chainId: rootstock.id,
-          hash: null,
-          success: false,
-          error: error.message,
-        })),
-
-      walletClientFlow
-        .sendTransaction({
-          to: FACTORY_CONTRACT_ADDRESS,
-          data: data,
-        })
-        .then((hash) => ({
-          chain: "flow",
-          chainId: flowMainnet.id,
-          hash,
-          success: true,
-        }))
-        .catch((error) => ({
-          chain: "flow",
-          chainId: flowMainnet.id,
-          hash: null,
-          success: false,
-          error: error.message,
-        })),
+      
     ];
     */
 
     // Wait for all transactions to complete
-    //const results = await Promise.all(transactionPromises);
+    const results = await Promise.all(transactionPromises);
 
     return NextResponse.json({
       success: true,
       userAddress: validatedAddress,
       contractAddress: FACTORY_CONTRACT_ADDRESS,
       encodedData: data,
-      //transactions: results,
-      //totalChains: results.length,
-      //successfulChains: results.filter((r) => r.success).length,
+      transactions: results,
+      totalChains: results.length,
+      successfulChains: results.filter((r) => r.success).length,
     });
   } catch (error) {
     console.error("Error executing deploy transactions:", error);
