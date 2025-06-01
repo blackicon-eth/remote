@@ -23,6 +23,7 @@ import {
   generateApproveSteps,
   generateTransactionStep,
   sanitizeNetworkId,
+  useDebounce,
 } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
@@ -50,17 +51,6 @@ enum CartStatus {
   TRANSACTIONS = "transactions",
   FINISHED = "finished",
 }
-
-const useDebounce = <T,>(value: T, delay: number): T => {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-
-  return debouncedValue;
-};
 
 export const Cart = () => {
   const { userTokens, sentinelContractAddress, refetchUserTokens } =

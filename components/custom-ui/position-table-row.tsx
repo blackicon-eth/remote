@@ -23,11 +23,19 @@ import {
 } from "../shadcn-ui/select";
 import { RemoteButton } from "./remote-button";
 import { useAppKitState } from "@reown/appkit/react";
+import { TransactionStep } from "@/lib/types";
 
 interface PositionTableRowProps {
   position: PortalsToken;
   isLast: boolean;
   index: number;
+}
+
+enum PositionTableRowStatus {
+  COMPILING = "compiling",
+  APPROVING = "approving",
+  TRANSACTIONS = "transactions",
+  FINISHED = "finished",
 }
 
 export const PositionTableRow = ({
@@ -44,13 +52,18 @@ export const PositionTableRow = ({
     "deposit"
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [positionTableRowStatus, setPositionTableRowStatus] =
+    useState<PositionTableRowStatus>(PositionTableRowStatus.COMPILING);
+  const [transactionSteps, setTransactionSteps] = useState<TransactionStep[]>(
+    []
+  );
+
   // If the position has images, use them, otherwise use the single image
   const positionImages = position.images ?? [position.image];
 
-  // Filter user tokens based on the chain of the position
-  const filteredUserTokens = userTokens?.tokens?.filter(
-    (token) => token.network === position.network
-  );
+  // Get the user tokens he has in his wallet
+  const userWalletTokens = userTokens?.tokens;
 
   // If the mode changes, reset the amount
   useEffect(() => {
@@ -205,12 +218,12 @@ export const PositionTableRow = ({
                         }
                       }}
                     />
-                    {filteredUserTokens && filteredUserTokens?.length > 0 ? (
+                    {userWalletTokens && userWalletTokens?.length > 0 ? (
                       <Select
                         value={selectedDepositToken?.key}
                         onValueChange={(value) =>
                           setSelectedDepositToken(
-                            filteredUserTokens?.find(
+                            userWalletTokens?.find(
                               (token) => token.key === value
                             ) ?? null
                           )
@@ -220,7 +233,7 @@ export const PositionTableRow = ({
                           <SelectValue placeholder="Select Token" />
                         </SelectTrigger>
                         <SelectContent>
-                          {filteredUserTokens?.map((token) => (
+                          {userWalletTokens?.map((token) => (
                             <SelectItem key={token.key} value={token.key}>
                               <img
                                 src={token.image}

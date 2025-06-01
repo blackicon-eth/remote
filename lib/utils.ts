@@ -16,6 +16,8 @@ import { env } from "./zod";
 import ky from "ky";
 import { CartItemStates, ContractParams, TransactionStep } from "./types";
 import { getEquivalentTokenAddress } from "./constants";
+import { useEffect } from "react";
+import { useState } from "react";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -234,4 +236,21 @@ export const extractStepParams = (
       valueToSend: step.valueToSend,
     };
   }
+};
+
+/**
+ * Debounces a value
+ * @param value - The value to debounce
+ * @param delay - The delay in milliseconds
+ * @returns The debounced value
+ */
+export const useDebounce = <T>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
 };
