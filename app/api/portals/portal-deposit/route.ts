@@ -220,6 +220,13 @@ export const POST = async (request: NextRequest) => {
                 );
                 console.log("stargateAddress", stargateAddress);
 
+                console.log("stargateAddress", stargateAddress);
+                console.log("chainIdToEid(req.destinationChainId)", chainIdToEid(req.destinationChainId));
+                console.log("sourceInputAmountBigInt", sourceInputAmountBigInt);
+                console.log("req.smartAccount", req.smartAccount);
+                console.log("BigInt(1200000)", BigInt(1200000));
+                console.log("composeMsg", composeMsg as `0x${string}`);
+
                 const result = await client.readContract({
                   address: req.smartAccount as `0x${string}`, //req.smartAccount as `0x${string}`
                   abi: REMOTE_ACCOUNT_ABI,
@@ -318,6 +325,8 @@ export const POST = async (request: NextRequest) => {
             result.request.sourceChainToken
           );
           console.log("stargateAddress", stargateAddress);
+
+          console.log("result", result);
 
           transactionCalldataToExecute = encodeStargateTransactionCalldata(
             "executeStargate",
