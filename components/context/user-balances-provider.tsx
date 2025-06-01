@@ -58,7 +58,7 @@ export function UserBalancesProvider({ children }: { children: ReactNode }) {
     refetchOnWindowFocus: false,
     queryFn: async () => {
       const response = await ky
-        .get<{ smartAccountAddress: Address; address: Address }>(
+        .get<{ address: Address; smartAccountAddress: Address }>(
           "/api/remote/account",
           {
             searchParams: {

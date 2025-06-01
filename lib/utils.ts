@@ -21,6 +21,7 @@ import { env } from "./zod";
 import ky from "ky";
 import { CartItemStates, ContractParams, TransactionStep } from "./types";
 import { getEquivalentTokenAddress } from "./constants";
+import { Item } from "@radix-ui/react-dropdown-menu";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -171,7 +172,7 @@ export const generateTransactionStep = async (
   smartAccountAddress: Address,
   cartItemStates: CartItemStates,
   networkId: string
-) => {
+): Promise<TransactionStep> => {
   const requests: PortalRequest[] = [];
 
   for (const item of Object.values(cartItemStates)) {
@@ -179,18 +180,18 @@ export const generateTransactionStep = async (
       smartAccount: smartAccountAddress,
       inputToken: getEquivalentTokenAddress(
         item.selectedToken?.address ?? "",
-        ChainIds[item.selectedToken?.network as keyof typeof ChainIds]
+        ChainIds[item.opportunity?.network as keyof typeof ChainIds]
       )!,
       inputAmount: item.amount,
       outputToken: item.opportunity?.address ?? "",
       sourceChainId: networkId,
       sourceChainToken: item.selectedToken?.address ?? "",
       destinationChainId:
-        ChainIds[
-          item.selectedToken?.network as keyof typeof ChainIds
-        ].toString(),
+        ChainIds[item.opportunity?.network as keyof typeof ChainIds].toString(),
     });
   }
+
+  console.log("requests", requests);
 
   const json: RequestBody = {
     requests,
@@ -202,7 +203,13 @@ export const generateTransactionStep = async (
     })
     .json();
 
-  return response.transactionCalldataToExecute;
+  return {
+    type: "transaction",
+    status: TransactionStatus.TO_SEND,
+    originTransaction: null,
+    callData: response.transactionCalldataToExecute as Hex,
+    valueToSend: response.valueToSend as string,
+  };
 };
 
 /**
@@ -213,24 +220,24 @@ export const generateTransactionStep = async (
  */
 export const extractStepParams = (
   step: TransactionStep,
-  networkId: string
+  networkId: string,
+  smartAccountAddress: Address
 ): ContractParams => {
   if (step.type === "approve") {
     return {
       abi: erc20Abi,
       functionName: "approve",
-      address: step.asset.address as Address,
+      address: step.asset!.address as Address,
       args: [step.spender as Address, step.allowanceAmount],
       chainId: Number(networkId),
     };
   } else {
     // TODO: Do this
     return {
-      abi: erc20Abi,
-      functionName: "transfer",
-      address: step.asset.address as Address,
-      args: [step.asset.address as Address, BigInt(step.allowanceAmount ?? 0)],
+      address: smartAccountAddress,
+      callData: step.callData,
       chainId: Number(networkId),
+      valueToSend: step.valueToSend,
     };
   }
 };

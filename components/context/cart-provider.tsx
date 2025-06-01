@@ -15,6 +15,7 @@ interface CartContextType {
   cart: PortalsToken[];
   addToCart: (token: PortalsToken) => void;
   removeFromCart: (token: PortalsToken) => void;
+  clearCart: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -42,13 +43,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [cart]
   );
 
+  const clearCart = useCallback(() => {
+    setCart([]);
+  }, []);
+
   const value = useMemo(
     () => ({
       cart,
       addToCart,
       removeFromCart,
+      clearCart,
     }),
-    [cart, addToCart, removeFromCart]
+    [cart, addToCart, removeFromCart, clearCart]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

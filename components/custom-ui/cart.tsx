@@ -1,4 +1,4 @@
-import { ShoppingCart } from "lucide-react";
+import { CheckCircle, ShoppingCart, SquareArrowOutUpRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCart } from "../context/cart-provider";
 import {
@@ -35,9 +35,14 @@ import {
 import { useUserBalances } from "../context/user-balances-provider";
 import { RemoteButton } from "./remote-button";
 import { Address, Hex } from "viem";
-import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import {
+  useSendTransaction,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from "wagmi";
 import { TransactionStep } from "@/lib/types";
 import { TransactionStatus } from "@/lib/enums";
+import StatusIndicator from "./status-indicator";
 
 enum CartStatus {
   COMPILING = "compiling",
@@ -61,7 +66,7 @@ export const Cart = () => {
   const { userTokens, sentinelContractAddress } = useUserBalances();
   const { isConnected, address: userAddress } = useAppKitAccount();
   const { selectedNetworkId } = useAppKitState();
-  const { cart, removeFromCart } = useCart();
+  const { cart, removeFromCart, clearCart } = useCart();
   const { open } = useAppKit();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartItemStates, setCartItemStates] = useState<{
@@ -103,6 +108,7 @@ export const Cart = () => {
   // The current step
   // (the step that is not yet successful)
   const { currentStep, currentStepIndex } = useMemo(() => {
+    console.log("Changing current step");
     const currentStepIndex = transactionSteps.findIndex(
       (step) => step.status !== TransactionStatus.SUCCESS
     );
@@ -114,24 +120,42 @@ export const Cart = () => {
 
   // wagmi hooks
   const {
-    data: hash,
-    isError: isWalletError,
+    data: approveHash,
+    isError: isApproveWalletError,
     writeContract,
   } = useWriteContract();
-  const { isError: isTxError, isSuccess: isTxSuccess } =
+  const {
+    data: transactionHash,
+    isError: isTransactionWalletError,
+    sendTransaction,
+  } = useSendTransaction();
+  const { isError: isApproveTxError, isSuccess: isApproveTxSuccess } =
     useWaitForTransactionReceipt({
-      hash,
+      hash: approveHash,
+    });
+  const { isError: isTransactionTxError, isSuccess: isTransactionTxSuccess } =
+    useWaitForTransactionReceipt({
+      hash: transactionHash,
     });
 
   // Whether there is an error
   const isGenericError = useMemo(
-    () => isWalletError || isTxError,
-    [isWalletError, isTxError]
+    () =>
+      isApproveWalletError ||
+      isTransactionWalletError ||
+      isApproveTxError ||
+      isTransactionTxError,
+    [
+      isApproveWalletError,
+      isTransactionWalletError,
+      isApproveTxError,
+      isTransactionTxError,
+    ]
   );
 
-  useEffect(() => {
-    console.log(cartItemStates);
-  }, [cartItemStates]);
+  // useEffect(() => {
+  //   console.log(cartItemStates);
+  // }, [cartItemStates]);
 
   const buttonObject = useMemo(() => {
     if (isGenericError) {
@@ -147,24 +171,25 @@ export const Cart = () => {
         text: "Deposit",
         onClick: async () => {
           setIsLoading(true);
-          // const approveSteps = await generateApproveSteps(
-          //   cartItemStates,
-          //   sanitizeNetworkId(selectedNetworkId),
-          //   userAddress as Address,
-          //   sentinelContractAddress?.address as Address
-          // );
-          const approveSteps: any[] = [];
+          const approveSteps = await generateApproveSteps(
+            cartItemStates,
+            sanitizeNetworkId(selectedNetworkId),
+            userAddress as Address,
+            sentinelContractAddress?.address as Address
+          );
+          // const approveSteps: any[] = [];
           console.log("approveSteps", approveSteps);
           if (approveSteps.length > 0) {
             setTransactionSteps(approveSteps);
             setCartStatus(CartStatus.APPROVING);
           } else {
-            const callData = await generateTransactionStep(
-              userAddress as Address,
+            const transactionStep = await generateTransactionStep(
+              sentinelContractAddress?.address as Address,
               cartItemStates,
               sanitizeNetworkId(selectedNetworkId)
             );
-            console.log("callData", callData);
+            console.log("transactionStep", transactionStep);
+            setTransactionSteps([transactionStep]);
             setCartStatus(CartStatus.TRANSACTIONS);
           }
         },
@@ -174,6 +199,11 @@ export const Cart = () => {
         text: "Close",
         onClick: () => {
           setIsCartOpen(false);
+          setCartItemStates({});
+          setCartStatus(CartStatus.COMPILING);
+          setIsLoading(false);
+          setTransactionSteps([]);
+          clearCart();
         },
       };
     }
@@ -184,13 +214,6 @@ export const Cart = () => {
     selectedNetworkId,
     isGenericError,
   ]);
-
-  // If there is an error, stop the loading
-  useEffect(() => {
-    if (isGenericError) {
-      setIsLoading(false);
-    }
-  }, [isGenericError]);
 
   // Function to trigger the write contract
   const triggerWriteContract = async (step: TransactionStep) => {
@@ -204,45 +227,129 @@ export const Cart = () => {
     // Extract the write contract params
     const writeContractParams = extractStepParams(
       step,
-      sanitizeNetworkId(selectedNetworkId)
+      sanitizeNetworkId(selectedNetworkId),
+      sentinelContractAddress?.address as Address
     );
-    writeContract(writeContractParams);
-  };
 
-  // Update the status of the current step to success
-  useEffect(() => {
-    if (isTxSuccess) {
+    if (step.type === "approve") {
+      writeContract(writeContractParams as any);
+    } else {
+      console.log("Sending transaction", writeContractParams);
+      // sendTransaction({
+      //   to: writeContractParams.address,
+      //   data: writeContractParams.callData,
+      //   value: BigInt(writeContractParams.valueToSend ?? "0"),
+      // });
+      console.log("isTransactionTxSuccess", isTransactionTxSuccess);
       const originTransaction = {
-        hash: hash!,
-        link: `${"TODO"}/tx/${hash}`,
+        hash: transactionHash!,
+        link: `${
+          sanitizeNetworkId(selectedNetworkId) === "747"
+            ? "https://evm.flowscan.io/"
+            : sanitizeNetworkId(selectedNetworkId) === "30"
+            ? "https://explorer.rootstock.io/"
+            : "https://flarescan.com/"
+        }/tx/${transactionHash}`,
       };
 
-      // Update the status of the current step but still await for the transaction to be confirmed
-      // On the destination chain, the transaction will be confirmed when the intent is fulfilled
+      // Update the status of the current step to success
       handleChangeStatus(
         currentStepIndex,
         TransactionStatus.SUCCESS,
         originTransaction
       );
-    }
-  }, [isTxSuccess]);
 
-  // Automatically start the transaction if the current step is to send
-  useEffect(() => {
-    // If there is no current step, set the process as finished and change the page state to payment completed
-    if (
-      transactionSteps.length > 0 &&
-      transactionSteps.every(
-        (step) => step.status === TransactionStatus.SUCCESS
-      )
-    ) {
+      setIsLoading(false);
       setIsFinished(true);
       setTimeout(() => {
         setCartStatus(CartStatus.FINISHED);
       }, 1250);
-      return;
     }
+  };
 
+  // Update the status of the current step to error
+  useEffect(() => {
+    if (isGenericError) {
+      setIsLoading(false);
+      handleChangeStatus(currentStepIndex, TransactionStatus.ERROR, null);
+    }
+  }, [isGenericError]);
+
+  // Update the status of the current approve step to success
+  useEffect(() => {
+    const handleApproveTxSuccess = async () => {
+      if (isApproveTxSuccess) {
+        console.log("isApproveTxSuccess", isApproveTxSuccess);
+        const originTransaction = {
+          hash: approveHash!,
+          link: `${
+            sanitizeNetworkId(selectedNetworkId) === "747"
+              ? "https://evm.flowscan.io/"
+              : sanitizeNetworkId(selectedNetworkId) === "30"
+              ? "https://explorer.rootstock.io/"
+              : "https://flarescan.com/"
+          }/tx/${approveHash}`,
+        };
+
+        // Update the status of the current step to success
+        handleChangeStatus(
+          currentStepIndex,
+          TransactionStatus.SUCCESS,
+          originTransaction
+        );
+
+        // If we finished all approvals, generate the transaction steps and start the transactions
+        if (
+          transactionSteps.every(
+            (step) => step.status === TransactionStatus.SUCCESS
+          )
+        ) {
+          const transactionStep = await generateTransactionStep(
+            sentinelContractAddress?.address as Address,
+            cartItemStates,
+            sanitizeNetworkId(selectedNetworkId)
+          );
+          setTransactionSteps((prev) => [...prev, transactionStep]);
+          setCartStatus(CartStatus.TRANSACTIONS);
+        }
+      }
+    };
+
+    handleApproveTxSuccess();
+  }, [isApproveTxSuccess]);
+
+  // Update the status of the current transaction step to success
+  useEffect(() => {
+    if (isTransactionTxSuccess) {
+      console.log("isTransactionTxSuccess", isTransactionTxSuccess);
+      const originTransaction = {
+        hash: transactionHash!,
+        link: `${
+          sanitizeNetworkId(selectedNetworkId) === "747"
+            ? "https://evm.flowscan.io/"
+            : sanitizeNetworkId(selectedNetworkId) === "30"
+            ? "https://explorer.rootstock.io/"
+            : "https://flarescan.com/"
+        }/tx/${transactionHash}`,
+      };
+
+      // Update the status of the current step to success
+      handleChangeStatus(
+        currentStepIndex,
+        TransactionStatus.SUCCESS,
+        originTransaction
+      );
+
+      setIsLoading(false);
+      setIsFinished(true);
+      setTimeout(() => {
+        setCartStatus(CartStatus.FINISHED);
+      }, 1250);
+    }
+  }, [isTransactionTxSuccess]);
+
+  // Automatically start the transaction if the current step is to send
+  useEffect(() => {
     // If the current step is to send, trigger the next step
     if (currentStep && currentStep.status === TransactionStatus.TO_SEND) {
       triggerWriteContract(currentStep);
@@ -563,13 +670,91 @@ export const Cart = () => {
                         </motion.div>
                       ))}
                     </motion.div>
-                  ) : (
-                    <motion.div>
+                  ) : cartStatus === CartStatus.APPROVING ||
+                    cartStatus === CartStatus.TRANSACTIONS ? (
+                    <motion.div
+                      key={cartStatus}
+                      initial={{ opacity: 0, x: 100 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -100 }}
+                      className="flex flex-col gap-4"
+                    >
                       {transactionSteps.map((step, index) => (
-                        <div key={index}>
-                          <p>{step.status}</p>
+                        <div
+                          key={index}
+                          className="flex justify-between items-center w-full min-h-[44px] sm:min-h-0"
+                        >
+                          <div className="flex justify-start items-center w-full gap-6 px-4">
+                            {/* Status */}
+                            <StatusIndicator status={step.status} />
+
+                            {/* Tokens */}
+                            <p className="text-lg font-medium">
+                              {step.type === "approve"
+                                ? "Approve"
+                                : "Send Tokens"}
+                            </p>
+                          </div>
+
+                          {/* Tx hashes */}
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{
+                              opacity: 1,
+                              width: "fit-content",
+                              transition: {
+                                duration: 0.5,
+                                ease: "easeInOut",
+                              },
+                            }}
+                            exit={{ opacity: 0 }}
+                            layout
+                            className="flex sm:flex-row flex-col justify-center items-end sm:items-center sm:gap-1.5 text-xs underline shrink-0 cursor-pointer"
+                          >
+                            {step.originTransaction && (
+                              <motion.div
+                                key={`link-${step.originTransaction.hash}`}
+                                initial={{ opacity: 0 }}
+                                animate={{
+                                  opacity: 1,
+                                  scale: [
+                                    1, 1.025, 1.075, 1.15, 1.075, 1.025, 1,
+                                  ],
+                                }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.3 }}
+                                layout
+                                className="flex justify-center items-center gap-1 text-xs underline shrink-0 cursor-pointer"
+                                onClick={() =>
+                                  window.open(
+                                    step.originTransaction!.link,
+                                    "_blank"
+                                  )
+                                }
+                              >
+                                See Transaction
+                                <SquareArrowOutUpRight className="size-3" />
+                              </motion.div>
+                            )}
+                          </motion.div>
                         </div>
                       ))}
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="finished"
+                      initial={{ opacity: 0, x: 100 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="flex flex-col justify-center items-center gap-2"
+                    >
+                      <CheckCircle className="size-10 text-green-400" />
+                      <h2 className="text-xl font-medium">
+                        Your transaction has been sent!
+                      </h2>
+                      <p className="text-sm text-neutral-400">
+                        You can close this modal now
+                      </p>
                     </motion.div>
                   )}
                 </AnimatePresence>
