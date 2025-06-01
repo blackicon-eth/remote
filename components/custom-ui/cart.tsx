@@ -88,6 +88,12 @@ export const Cart = () => {
     []
   );
 
+  // Sanitized network id
+  const sanitizedNetworkId = useMemo(
+    () => sanitizeNetworkId(selectedNetworkId),
+    [selectedNetworkId]
+  );
+
   // Function to change the status of a transaction step
   const handleChangeStatus = (
     index: number,
@@ -160,7 +166,7 @@ export const Cart = () => {
           setIsLoading(true);
           const approveSteps = await generateApproveSteps(
             cartItemStates,
-            sanitizeNetworkId(selectedNetworkId),
+            sanitizedNetworkId,
             userAddress as Address,
             sentinelContractAddress?.address as Address
           );
@@ -171,7 +177,7 @@ export const Cart = () => {
             const transactionStep = await generateTransactionStep(
               sentinelContractAddress?.address as Address,
               cartItemStates,
-              sanitizeNetworkId(selectedNetworkId)
+              sanitizedNetworkId
             );
             setTransactionSteps([transactionStep]);
             setCartStatus(CartStatus.TRANSACTIONS);
@@ -186,7 +192,7 @@ export const Cart = () => {
           setIsLoading(true);
           const approveSteps = await generateApproveSteps(
             cartItemStates,
-            sanitizeNetworkId(selectedNetworkId),
+            sanitizedNetworkId,
             userAddress as Address,
             sentinelContractAddress?.address as Address
           );
@@ -197,7 +203,7 @@ export const Cart = () => {
             const transactionStep = await generateTransactionStep(
               sentinelContractAddress?.address as Address,
               cartItemStates,
-              sanitizeNetworkId(selectedNetworkId)
+              sanitizedNetworkId
             );
             setTransactionSteps([transactionStep]);
             setCartStatus(CartStatus.TRANSACTIONS);
@@ -238,7 +244,7 @@ export const Cart = () => {
     // Extract the write contract params
     const writeContractParams = extractStepParams(
       step,
-      sanitizeNetworkId(selectedNetworkId),
+      sanitizedNetworkId,
       sentinelContractAddress?.address as Address
     );
 
@@ -246,34 +252,34 @@ export const Cart = () => {
       writeContract(writeContractParams as any);
     } else {
       console.log("Sending transaction", writeContractParams);
-      // sendTransaction({
-      //   to: writeContractParams.address,
-      //   data: writeContractParams.callData,
-      //   value: BigInt(writeContractParams.valueToSend ?? "0"),
-      // });
-      console.log("isTransactionTxSuccess", isTransactionTxSuccess);
-      const originTransaction = {
-        hash: transactionHash!,
-        link: `${
-          sanitizeNetworkId(selectedNetworkId) === "747"
-            ? "https://evm.flowscan.io/"
-            : sanitizeNetworkId(selectedNetworkId) === "30"
-            ? "https://explorer.rootstock.io/"
-            : "https://flarescan.com/"
-        }/tx/${transactionHash}`,
-      };
+      sendTransaction({
+        to: writeContractParams.address,
+        data: writeContractParams.callData,
+        value: BigInt(writeContractParams.valueToSend ?? "0"),
+      });
+      // console.log("isTransactionTxSuccess", isTransactionTxSuccess);
+      // const originTransaction = {
+      //   hash: transactionHash!,
+      //   link: `${
+      //     sanitizedNetworkId === "747"
+      //       ? "https://evm.flowscan.io/"
+      //       : sanitizedNetworkId === "30"
+      //       ? "https://explorer.rootstock.io/"
+      //       : "https://flarescan.com/"
+      //   }/tx/${transactionHash}`,
+      // };
 
-      // Update the status of the current step to success
-      handleChangeStatus(
-        currentStepIndex,
-        TransactionStatus.SUCCESS,
-        originTransaction
-      );
+      // // Update the status of the current step to success
+      // handleChangeStatus(
+      //   currentStepIndex,
+      //   TransactionStatus.SUCCESS,
+      //   originTransaction
+      // );
 
-      setIsLoading(false);
-      setTimeout(() => {
-        setCartStatus(CartStatus.FINISHED);
-      }, 1250);
+      // setIsLoading(false);
+      // setTimeout(() => {
+      //   setCartStatus(CartStatus.FINISHED);
+      // }, 1250);
     }
   };
 
@@ -293,9 +299,9 @@ export const Cart = () => {
         const originTransaction = {
           hash: approveHash!,
           link: `${
-            sanitizeNetworkId(selectedNetworkId) === "747"
+            sanitizedNetworkId === "747"
               ? "https://evm.flowscan.io/"
-              : sanitizeNetworkId(selectedNetworkId) === "30"
+              : sanitizedNetworkId === "30"
               ? "https://explorer.rootstock.io/"
               : "https://flarescan.com/"
           }/tx/${approveHash}`,
@@ -313,10 +319,12 @@ export const Cart = () => {
           const transactionStep = await generateTransactionStep(
             sentinelContractAddress?.address as Address,
             cartItemStates,
-            sanitizeNetworkId(selectedNetworkId)
+            sanitizedNetworkId
           );
           setTransactionSteps((prev) => [...prev, transactionStep]);
-          setCartStatus(CartStatus.TRANSACTIONS);
+          setTimeout(() => {
+            setCartStatus(CartStatus.TRANSACTIONS);
+          }, 1000);
         }
       }
     };
@@ -331,9 +339,9 @@ export const Cart = () => {
       const originTransaction = {
         hash: transactionHash!,
         link: `${
-          sanitizeNetworkId(selectedNetworkId) === "747"
+          sanitizedNetworkId === "747"
             ? "https://evm.flowscan.io/"
-            : sanitizeNetworkId(selectedNetworkId) === "30"
+            : sanitizedNetworkId === "30"
             ? "https://explorer.rootstock.io/"
             : "https://flarescan.com/"
         }/tx/${transactionHash}`,
