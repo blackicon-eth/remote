@@ -199,6 +199,7 @@ export const POST = async (request: NextRequest) => {
 
             // Call prepare function on smart account
             let prepareResult;
+            let stargateAddress;
             try {
               const chainId = parseInt(req.sourceChainId!);
               const chain = CHAIN_CONFIGS[chainId];
@@ -214,11 +215,11 @@ export const POST = async (request: NextRequest) => {
                 console.log("chainId", req.sourceChainId);
                 console.log("sourceChainToken", req.sourceChainToken);
 
-                const stargateAddress = getStargateAddress(
+                stargateAddress = getStargateAddress(
                   req.sourceChainId!,
                   req.sourceChainToken
                 );
-               
+                console.log("stargateAddress", stargateAddress);
 
                 const result = await client.readContract({
                   address: req.smartAccount as `0x${string}`, //req.smartAccount as `0x${string}`
@@ -233,6 +234,7 @@ export const POST = async (request: NextRequest) => {
                     BigInt(1200000), // 1.2m gas limit
                   ],
                 });
+
                 prepareResult = {
                   valueToSend: result[0].toString(),
                   sendParam: {
@@ -261,6 +263,7 @@ export const POST = async (request: NextRequest) => {
               request: req,
               composeMsg: composeMsg,
               prepareResult: prepareResult,
+              stargateAddress: stargateAddress,
             };
           } else {
             throw new Error(
@@ -276,6 +279,7 @@ export const POST = async (request: NextRequest) => {
             request: {} as PortalRequest,
             composeMsg: "",
             prepareResult: null,
+            stargateAddress: null,
             error: error instanceof Error ? error.message : "Unknown error",
           };
         }
@@ -283,7 +287,7 @@ export const POST = async (request: NextRequest) => {
     );
 
     // Process results
-    const processedResults: PortalItem[] = results.map((result) => {
+    const processedResults = results.map((result) => {
       if (result.status === "fulfilled") {
         return result.value;
       } else {
@@ -295,101 +299,24 @@ export const POST = async (request: NextRequest) => {
           request: {} as PortalRequest,
           composeMsg: "",
           prepareResult: null,
+          stargateAddress: null,
           error: result.reason?.message || "Request failed",
         };
       }
     });
 
-    // Create transaction calldata to execute based on batch or single operation
-    let transactionCalldataToExecute = "0x";
+    // Return the first result (since this is simple deposit, we expect only one)
+    const firstResult = processedResults[0];
 
-    const successfulResults = processedResults.filter(
-      (r) => !r.error && r.prepareResult
-    );
-
-    if (successfulResults.length > 0) {
-      if (requests.length === 1) {
-        // Single operation - use executeStargate
-        const result = successfulResults[0];
-        if (result.prepareResult) {
-          const stargateAddress = getStargateAddress(
-            result.request.sourceChainId!,
-            result.request.sourceChainToken
-          );
-          console.log("porco dio", result.prepareResult.valueToSend);
-
-          transactionCalldataToExecute = encodeStargateTransactionCalldata(
-            "executeStargate",
-            [
-              stargateAddress, // address _stargate
-              result.prepareResult.sendParam, // SendParam memory _sendParam
-              result.prepareResult.messagingFee, // MessagingFee memory _messagingFee
-              BigInt(result.prepareResult.valueToSend), // uint256 _nativeAmount
-            ]
-          );
-         
-        }
-      } else {
-        // Batch operation - use executeBatchStargate
-        const stargateAddresses: string[] = [];
-        const sendParams: any[] = [];
-        const messagingFees: any[] = [];
-        const nativeAmounts: string[] = [];
-
-        for (const result of successfulResults) {
-          if (result.prepareResult) {
-            const stargateAddress = getStargateAddress(
-              result.request.sourceChainId!,
-              result.request.sourceChainToken
-            );
-
-            stargateAddresses.push(stargateAddress || EMPTY_ADDRESS);
-            sendParams.push(result.prepareResult.sendParam);
-            messagingFees.push(result.prepareResult.messagingFee);
-            nativeAmounts.push(result.prepareResult.valueToSend);
-          }
-        }
-
-        transactionCalldataToExecute = encodeStargateTransactionCalldata(
-          "executeBatchStargate",
-          [
-            stargateAddresses, // address[] memory _stargateAddresses
-            sendParams, // SendParam[] memory _sendParams
-            messagingFees, // MessagingFee[] memory _messagingFees
-            nativeAmounts, // uint256[] memory _nativeAmounts
-          ]
-        );
-      }
-    }
-
-    // Transform to single result with arrays
-    const successfulPrepareResults = processedResults
-      .map((r) => r.prepareResult)
-      .filter((pr) => pr !== null);
-
-    // Calculate total valueToSend from all successful results
-    // valueToSend = sum of prepareResult.valueToSend (without messaging fees)
-    const totalValueToSend = successfulPrepareResults
-      .reduce((acc, prepareResult) => {
-        if (prepareResult) {
-          const valueToSend = BigInt(prepareResult.valueToSend);
-          return acc + valueToSend;
-        }
-        return acc;
-      }, BigInt(0))
-      .toString();
-
-    const finalResult: PortalResult = {
-      composeMsg: processedResults.map((r) => r.composeMsg),
-      prepareResult: processedResults.map((r) => r.prepareResult || null),
-      valueToSend: totalValueToSend,
-      transactionCalldataToExecute,
-      isBatch: requests.length > 1,
-      total: processedResults.length,
-      successful: processedResults.filter((r) => !r.error).length,
-    };
-
-    return NextResponse.json(finalResult);
+    return NextResponse.json({
+      prepareResult: firstResult.prepareResult,
+      stargateAddress: firstResult.stargateAddress,
+      to: firstResult.to,
+      value: firstResult.value,
+      context: firstResult.context,
+      composeMsg: firstResult.composeMsg,
+      error: firstResult.error,
+    });
   } catch (error) {
     console.error("Error calling Portals API:", error);
     return NextResponse.json(

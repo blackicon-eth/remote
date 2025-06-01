@@ -198,7 +198,7 @@ export const generateTransactionStep = async (
   };
 
   const response = await ky
-    .post<PortalResult>("api/portals/portal-deposit", {
+    .post<PortalResult>("api/portals/portal-simple-deposit", {
       json,
     })
     .json();

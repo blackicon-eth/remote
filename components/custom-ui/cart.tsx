@@ -235,12 +235,12 @@ export const Cart = () => {
       writeContract(writeContractParams as any);
     } else {
       console.log("Sending transaction", writeContractParams);
-      // sendTransaction({
-      //   to: writeContractParams.address,
-      //   data: writeContractParams.callData,
-      //   value: BigInt(writeContractParams.valueToSend ?? "0"),
-      // });
-      console.log("isTransactionTxSuccess", isTransactionTxSuccess);
+      sendTransaction({
+        to: writeContractParams.address,
+        data: writeContractParams.callData,
+        value: BigInt(writeContractParams.valueToSend ?? "0"),
+      });
+      /*console.log("isTransactionTxSuccess", isTransactionTxSuccess);
       const originTransaction = {
         hash: transactionHash!,
         link: `${
@@ -264,6 +264,7 @@ export const Cart = () => {
       setTimeout(() => {
         setCartStatus(CartStatus.FINISHED);
       }, 1250);
+      */
     }
   };
 
