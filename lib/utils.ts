@@ -20,7 +20,11 @@ import { AlchemyRpcBaseUrls, ChainIds, TransactionStatus } from "./enums";
 import { env } from "./zod";
 import ky from "ky";
 import { CartItemStates, ContractParams, TransactionStep } from "./types";
-import { EMPTY_ADDRESS, getEquivalentTokenAddress } from "./constants";
+import {
+  EMPTY_ADDRESS,
+  getEquivalentTokenAddress,
+  getStargateAddress,
+} from "./constants";
 import { useEffect } from "react";
 import { useState } from "react";
 import { STARGATE_ABI } from "./abi";
@@ -135,15 +139,17 @@ export const generateApproveSteps = async (
         item.selectedToken?.address.toLowerCase() === token.toLowerCase()
     );
 
+    const stargateAddress = getStargateAddress(
+      networkId,
+      tokenState?.selectedToken?.address ?? ""
+    );
+
     const allowance = Number(
       await publicClient.readContract({
         address: getAddress(token.toLowerCase() as Address),
         abi: erc20Abi,
         functionName: "allowance",
-        args: [
-          userAddress,
-          "0xAF54BE5B6eEc24d6BFACf1cce4eaF680A8239398", // TODO: Get this from somewhere
-        ],
+        args: [userAddress, stargateAddress as Address],
       })
     );
 
@@ -156,7 +162,7 @@ export const generateApproveSteps = async (
           "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
         ),
         asset: tokenState?.selectedToken!,
-        spender: "0xAF54BE5B6eEc24d6BFACf1cce4eaF680A8239398", // TODO: Get this from somewhere
+        spender: stargateAddress as Address,
       });
     }
   }
@@ -241,14 +247,16 @@ export const extractStepParams = (
   networkId: string
 ): ContractParams => {
   if (step.type === "approve") {
+    const stargateAddress = getStargateAddress(
+      networkId,
+      step.asset?.address ?? ""
+    );
+
     return {
       abi: erc20Abi,
       functionName: "approve",
       address: step.asset!.address as Address,
-      args: [
-        "0xAF54BE5B6eEc24d6BFACf1cce4eaF680A8239398", // TODO: Get this from somewhere
-        step.allowanceAmount,
-      ],
+      args: [stargateAddress as Address, step.allowanceAmount],
       chainId: Number(networkId),
     };
   } else {
